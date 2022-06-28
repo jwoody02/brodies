@@ -1,0 +1,32 @@
+{
+  "pins" : [
+    {
+      "identity" : "resultsugar",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eonist/ResultSugar",
+      "state" : {
+        "branch" : "master",
+        "revision" : "2365f96ee9ab4d70108a1a1ac116179304ffb8a3"
+      }
+    },
+    {
+      "identity" : "with",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eonist/With.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "b88cb993e2d439f3bc543eedebc12e708526a641"
+      }
+    },
+    {
+      "identity" : "zoomswitcherkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eonist/ZoomSwitcherKit",
+      "state" : {
+        "branch" : "master",
+        "revision" : "87039ba2d1ddc7856cdf179a74730de02b48dfe4"
+      }
+    }
+  ],
+  "version" : 2
+}
