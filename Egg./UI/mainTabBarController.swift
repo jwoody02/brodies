@@ -8,7 +8,7 @@ import Foundation
 import SwiftKeychainWrapper
 import SwipeableTabBarController
 import FirebaseAuth
-
+import FirebaseFirestore
 struct Constants {
     static let borderRadius: CGFloat = 12
     static let globalFont: String = "HelveticaNeue"
@@ -16,12 +16,20 @@ struct Constants {
 //    purple theme
     static let primaryColor: String = "#5e5cf5"
     static let secondaryColor: String = "#dddcfd"
+    static let backgroundColor: String = "#f8f8f8"
+    static let surfaceColor: String = "#ffffff"
+    static let textColor: String = "#000000"
     
     // blue theme
 //    static let primaryColor: String = "#3484f0"
 //    static let secondaryColor: String = "#c4dbfa"
-    static let backgroundColor: String = "#f8f8f8"
-    static let surfaceColor: String = "#ffffff"
+    
+
+    
+//    static let backgroundColor: String = "#000000"
+//    static let surfaceColor: String = "#222222"
+//    static let textColor: String = "#ffffff"
+//    static let secondaryColor: String = "#222222"
     
     static let groupPrimaryColor: String = "#8D4AC0"
     static let groupSecondaryColor: String = "#e4cbf7"
@@ -31,19 +39,34 @@ struct Constants {
     
     static let isDebugEnabled = false
     
+    static let imagePadding = 1
+    
+    static let universalRed: String = "#d9554e"
+    
+    static let isDarkmode: Bool = false
+    
 }
 class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
     let defaults = UserDefaults.standard
     var customTabBarView = UIView(frame: .zero)
     var selectedTabBarViewMover: UIView?
     var plusButton: UIImageView?
+    var profileImageView: UIImageView?
     let tabBarWidthHeight = 40
+    var hasSetDefaultCase = false
+    var shouldSetRedTing = false
     
+    private var db = Firestore.firestore()
+    
+    var redNotificationsCircle: UIView?
+    
+    var notificationsPopup = UIView(frame: .zero)
     override func viewDidLoad() {
         super.viewDidLoad()
 //        logout()
         
         // Do any additional setup after loading the view.
+        
         self.setupTabBarUI()
         self.addCustomTabBarView()
         self.setupTabBarViewer()
@@ -61,12 +84,54 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
         let widthHeight = 30
         plusButton?.frame = CGRect(x: Int(UIScreen.main.bounds.width) / 2 - widthHeight / 2, y: 18, width: widthHeight, height: widthHeight)
         plusButton?.contentMode = .scaleAspectFit
+        self.tabBar.bringSubviewToFront(plusButton!)
         self.tabBar.addSubview(plusButton!)
+        
+        notificationsPopup.isUserInteractionEnabled = false
+        notificationsPopup.backgroundColor = Constants.universalRed.hexToUiColor()
+        notificationsPopup.layer.cornerRadius = 8
+        notificationsPopup.frame = CGRect(x: Int(UIScreen.main.bounds.width) / 2 - widthHeight / 2, y: -18, width: widthHeight, height: widthHeight)
+        
+        self.profileImageView = UIImageView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
+        profileImageView?.isUserInteractionEnabled = false
+        profileImageView?.layer.cornerRadius = 10
+        profileImageView?.clipsToBounds = true
+        profileImageView?.image = UIImage(named: "no-profile-img.jpeg")
+//        profileImageView?.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
+//        let widthHeight = 30
+        let xee = Int(UIScreen.main.bounds.width) - widthHeight - 25
+        profileImageView?.frame = CGRect(x: Int(xee), y: Int(18), width: widthHeight+2, height: widthHeight+2)
+            profileImageView?.contentMode = .scaleAspectFill
+        profileImageView?.layer.borderColor = UIColor.white.cgColor
+        profileImageView?.layer.borderWidth = 3
+        DispatchQueue.global(qos: .background).async {
+            if let savedImage = self.retrieveImage(forKey: "profilepic",
+                                                   inStorageType: .fileSystem) {
+                DispatchQueue.main.async {
+                    self.profileImageView?.image = savedImage
+                }
+            }
+        }
+            self.tabBar.addSubview(profileImageView!)
+        
+        
+        if Constants.isDebugEnabled {
+//            var window : UIWindow = UIApplication.shared.keyWindow!
+//            window.showDebugMenu()
+            self.view.debuggingStyle = true
+        }
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        print("* DID LAYOUT SUBVIEWS")
         self.setupCustomTabBarFrame()
+        if hasSetDefaultCase == false {
+            selectedTabBarViewMover?.frame = CGRect(x: Int(self.tabBar.getFrameForTabAt(index: 0)!.centerX) - tabBarWidthHeight / 2, y: Int(self.tabBar.getFrameForTabAt(index: 0)!.centerY) - (tabBarWidthHeight / 2) + 2, width: tabBarWidthHeight, height: tabBarWidthHeight)
+            
+            hasSetDefaultCase = true
+        }
+        
         
         
     }
@@ -86,7 +151,11 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
         let generator = UIImpactFeedbackGenerator(style: .heavy)
         generator.impactOccurred()
         UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5, options: .curveEaseInOut, animations: {
-            self.selectedTabBarViewMover?.frame = CGRect(x: Int(self.tabBar.getFrameForTabAt(index: (tabBar.items?.firstIndex(of: item))!)!.centerX) - self.tabBarWidthHeight / 2, y: Int(self.tabBar.getFrameForTabAt(index: (tabBar.items?.firstIndex(of: item))!)!.centerY) - (self.tabBarWidthHeight / 2) + 2, width: self.tabBarWidthHeight, height: self.tabBarWidthHeight)
+            let newXC = Int(self.tabBar.getFrameForTabAt(index: (tabBar.items?.firstIndex(of: item))!)!.centerX) - self.tabBarWidthHeight / 2
+            self.selectedTabBarViewMover?.frame = CGRect(x: newXC, y: Int(self.tabBar.getFrameForTabAt(index: (tabBar.items?.firstIndex(of: item))!)!.centerY) - (self.tabBarWidthHeight / 2) + 2, width: self.tabBarWidthHeight, height: self.tabBarWidthHeight)
+            if (tabBar.items?.firstIndex(of: item))! == 3 {
+                self.redNotificationsCircle?.alpha = 0
+            }
         })
     }
     private func setupTabBarViewer() {
@@ -116,6 +185,46 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
             self.customTabBarView.layer.cornerRadius = Constants.borderRadius
             self.tabBar.clipsToBounds = true
         }
+        handleRedView()
+    }
+    func handleRedView() {
+        let wid = 5
+        redNotificationsCircle = UIView(frame: CGRect(x: 0, y: 10, width: wid, height: wid))
+        redNotificationsCircle?.center.x = (self.tabBar.getFrameForTabAt(index: 3)!).centerX
+        redNotificationsCircle?.layer.cornerRadius = (redNotificationsCircle?.frame.width ?? 0) / 2
+        print("* red circle frame = \(redNotificationsCircle!.frame)")
+        self.tabBar.addSubview(redNotificationsCircle!)
+        self.tabBar.bringSubviewToFront(redNotificationsCircle!)
+        let userID = Auth.auth().currentUser?.uid
+        if userID != nil {
+            let notifQuery = db.collection("notifications").document(userID!)
+            notifQuery.getDocument() { [self] (document, error) in
+                if let document = document {
+                    let data = document.data() as? [String: AnyObject]
+                    let totalCount = data?["notifications_count"] as? Int ?? 0
+                    let commentsCount = data?["num_comments_notifications"] as? Int ?? 0
+                    let followersCount = data?["num_followers_notifications"] as? Int ?? 0
+                    let numPostLikes = data?["num_likes_notifications"] as? Int ?? 0
+                    let numCommentLikes = data?["num_comments_likes_notifications"] as? Int ?? 0
+                    if commentsCount == 0 && followersCount == 0 && numPostLikes == 0 && numCommentLikes == 0 {
+                        print("* [tab bar] user has no new notifications")
+                        shouldSetRedTing = false
+                        redNotificationsCircle?.alpha = 0
+                    } else {
+                        print("* [tab bar] user has some new notifs")
+                        shouldSetRedTing = true
+                        redNotificationsCircle?.alpha = 1
+                    }
+                }
+            }
+        }
+//        if shouldSetRedTing {
+//            print("* [tab bar] handleredview -- showing red circle")
+//            
+//        } else {
+//            print("* [tab bar] handleredview -- not showing red circle")
+//            
+//        }
     }
     // MARK: Private methods
     
@@ -130,7 +239,10 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
         self.tabBar.setNeedsLayout()
         self.tabBar.layoutIfNeeded()
         customTabBarView.frame = tabBar.frame
-        selectedTabBarViewMover?.frame = CGRect(x: Int(self.tabBar.getFrameForTabAt(index: 0)!.centerX) - tabBarWidthHeight / 2, y: Int(self.tabBar.getFrameForTabAt(index: 0)!.centerY) - (tabBarWidthHeight / 2) + 2, width: tabBarWidthHeight, height: tabBarWidthHeight)
+        
+        
+        self.profileImageView?.center.x = CGFloat(self.tabBar.getFrameForTabAt(index: 4)!.centerX)
+//        self.profileImageView?.center.y = CGFloat(self.tabBar.getFrameForTabAt(index: 4)!.centerY)
     }
     private func setupTabBarUI() {
         // Setup your colors and corner radius

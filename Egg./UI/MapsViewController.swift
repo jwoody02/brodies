@@ -12,10 +12,11 @@ import FirebaseCore
 import FirebaseAuth
 import CoreLocation
 import MapKit
-import MapKitGoogleStyler
+//import MapKitGoogleStyler
 import FirebaseFirestore
 import GoogleMobileAds
 import FirebaseAnalytics
+import Kingfisher
 
 class MapPin: NSObject, MKAnnotation {
    let title: String?
@@ -36,9 +37,225 @@ class MapPin: NSObject, MKAnnotation {
    }
     
 }
-
-class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFieldDelegate {
+class AdPin: NSObject, MKAnnotation {
+    let imageURL: String?
+    let title: String?
+    let type = "ad"
+    let actionURL: String?
+    let coordinate: CLLocationCoordinate2D
+    init(imageURL:String, title: String, coordinate: CLLocationCoordinate2D, actionURL: String) {
+      self.imageURL = imageURL
+      self.title = title
+        self.actionURL = actionURL
+        self.coordinate = coordinate
+   }
     
+}
+class searchResultsTableViewCell: UITableViewCell {
+    private var db = Firestore.firestore()
+    @IBOutlet weak var profilePicButton: IGStoryButton!
+    @IBOutlet weak var titleLabel: UILabel!
+    @IBOutlet weak var subTitleLabel: UILabel!
+    @IBOutlet weak var arrButton: UIButton!
+    
+    @IBOutlet weak var locationLabel: UILabel!
+    @IBOutlet weak var locationImage: UIImageView!
+    var result = User(uid: "", username: "", profileImageUrl: "", bio: "", followingCount: 0, followersCount: 0, postsCount: 0, fullname: "", hasValidStory: false, isFollowing: false)
+    func styleCell() {
+        profilePicButton.setTitle("", for: .normal)
+        arrButton.setTitle("", for: .normal)
+        
+        let profWid = Int(self.contentView.frame.height - 32)
+        let profXY = Int(16)
+        profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
+        profilePicButton.layer.cornerRadius = 12
+        titleLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
+        subTitleLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        
+        let titleWidths = Int(Int(self.contentView.frame.width) - profXY - profWid - 10 - 30)
+        titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 17, width: titleWidths, height: 16)
+        subTitleLabel.frame = CGRect(x: titleLabel.frame.minX + 2, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        self.backgroundColor = .clear
+        self.contentView.backgroundColor = .white
+        self.contentView.layer.cornerRadius = 12
+        self.contentView.layer.borderWidth = 1.0
+        self.contentView.layer.borderColor = UIColor.clear.cgColor
+        self.contentView.layer.masksToBounds = true
+
+        self.layer.shadowColor = UIColor.black.withAlphaComponent(0.3).cgColor
+        self.layer.shadowOffset = CGSize(width: 0, height: 4)
+        self.layer.shadowRadius = 12
+        self.layer.cornerRadius = 12
+        self.layer.shadowOpacity = 0.1
+        self.contentView.layer.borderWidth = 1
+        self.contentView.layer.borderColor = hexStringToUIColor(hex: "#f0f0f5").cgColor
+        self.layer.masksToBounds = false
+        self.clipsToBounds = true
+        
+        arrButton.layer.cornerRadius = 12
+        let arrWit = 30
+        arrButton.frame = CGRect(x: Int(self.contentView.frame.width) - arrWit - 15, y: 26, width: arrWit, height: arrWit)
+        
+        locationImage.frame = CGRect(x: titleLabel.frame.minX-1, y: subTitleLabel.frame.maxY+3, width: 10, height: 10)
+        locationImage.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
+        locationLabel.frame = CGRect(x: locationImage.frame.maxX + 3, y: locationImage.frame.minY - 2, width: self.contentView.frame.width - CGFloat(profWid) - 30, height: 14)
+        locationLabel.textColor = hexStringToUIColor(hex: Constants.primaryColor)
+        locationLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+        if result.profileImageUrl == "" {
+            profilePicButton.image = UIImage(named: "no-profile-img.jpeg")
+            print("* no profile pic, defaulting iamge")
+        } else {
+            downloadImage(with: result.profileImageUrl)
+        }
+        
+        
+        
+//        arrButton.center.y = self.contentView.center.y
+    }
+    func downloadImage(`with` urlString : String) {
+        guard let url = URL.init(string: urlString) else {
+            return
+        }
+        let resource = ImageResource(downloadURL: url)
+
+        KingfisherManager.shared.retrieveImage(with: resource, options: nil, progressBlock: nil) { result in
+            switch result {
+            case .success(let value):
+                self.profilePicButton.image = value.image
+            case .failure(let error):
+                print("Error: \(error)")
+            }
+        }
+    }
+    func hexStringToUIColor (hex:String) -> UIColor {
+        var cString:String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        
+        if (cString.hasPrefix("#")) {
+            cString.remove(at: cString.startIndex)
+        }
+        
+        if ((cString.count) != 6) {
+            return UIColor.gray
+        }
+        
+        var rgbValue:UInt64 = 0
+        Scanner(string: cString).scanHexInt64(&rgbValue)
+        
+        return UIColor(
+            red: CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0,
+            green: CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0,
+            blue: CGFloat(rgbValue & 0x0000FF) / 255.0,
+            alpha: CGFloat(1.0)
+        )
+    }
+    func setPostImage(fromUrl: String) {
+//        self.profilePicButton.contentMode = .scaleAspectFill
+//        let url = URL(string: fromUrl)
+//        let processor = DownsamplingImageProcessor(size: self.FlagShipImageView.bounds.size)
+//        self.FlagShipImageView.kf.indicatorType = .activity
+//        self.FlagShipImageView.kf.setImage(
+//            with: url,
+//            options: [
+//                .processor(processor),
+//                .scaleFactor(UIScreen.main.scale),
+//                .transition(.fade(0.5)),
+//                .cacheOriginalImage
+//            ])
+//        {
+//            result in
+//            switch result {
+//            case .success(let value):
+//                print("Task done for: \(value.source.url?.absoluteString ?? "")")
+//
+//            case .failure(let error):
+//                print("Job failed: \(error.localizedDescription)")
+//            }
+//        }
+    }
+    // Inside UITableViewCell subclass
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        contentView.frame = contentView.frame.inset(by: UIEdgeInsets(top: 5, left: 10, bottom: 5, right: 10))
+        styleCell()
+    }
+}
+class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFieldDelegate, UITableViewDelegate, UITableViewDataSource, GADNativeAdLoaderDelegate {
+    func adLoader(_ adLoader: GADAdLoader, didFailToReceiveAdWithError error: Error) {
+        print("* failed to receive ad: \(error.localizedDescription)")
+    }
+    public func adLoader(_ adLoader: GADAdLoader,
+                         didReceive nativeAd: GADNativeAd) {
+        print("* received native ad")
+        let iconImage = nativeAd.icon
+        let adName = nativeAd.advertiser
+        let callToAction = nativeAd.callToAction
+        let appPrice = nativeAd.price
+        let adDescription = nativeAd.body
+        let adHeadline = nativeAd.headline
+        let mainImag = nativeAd.mediaContent.mainImage
+        let firstImage = nativeAd.images?.first?.imageURL?.absoluteString
+        
+        if let loc = self.locationManager.location {
+            let randomLocation = loc.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)).coordinate
+        }
+        
+//        let ad = AdPin(imageURL: iconImage?.imageURL?.absoluteString ?? "", title: adName, coordinate: randomLocation)
+//        mapView.addAnnotation(ad)
+        print("name: \(adName ?? "")")
+        print("iconImage: \(iconImage?.imageURL?.absoluteString ?? "")")
+        print("callToAction: \(callToAction ?? "")")
+        print("appPrice: \(appPrice ?? "")")
+        print("adDescription: \(adDescription ?? "")")
+        print("headline: \(adHeadline ?? "")")
+        print("* first image: \(firstImage)")
+    }
+    func adLoaderDidFinishLoading(_ adLoader: GADAdLoader) {
+          // The adLoader has finished loading ads, and a new request can be sent.
+        print("* finished loading ads")
+      }
+    let cellSpacingHeight: CGFloat = 20
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return searchResults.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "searchResultsTableViewCell", for: indexPath) as! searchResultsTableViewCell
+        let res = searchResults[indexPath.row]
+        cell.result = res
+        cell.titleLabel.text = res.fullname
+        cell.subTitleLabel.text = res.username
+        cell.locationLabel.text = res.location ?? "No location"
+        cell.selectionStyle = .none
+        if res.hasValidStory {
+            print("* valid story")
+            cell.profilePicButton.isUserInteractionEnabled = true
+            cell.profilePicButton.condition = .init(display: .unseen, color: .custom(colors: [hexStringToUIColor(hex: Constants.primaryColor), .blue, hexStringToUIColor(hex: Constants.primaryColor).withAlphaComponent(0.6)]))
+        } else {
+            print("* no valid story")
+            cell.profilePicButton.condition = .init(display: .none, color: .none)
+        }
+        cell.isUserInteractionEnabled = true
+        return cell
+    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.row < searchResults.count {
+            openProfileForUser(withUID: searchResults[indexPath.row].uid)
+        }
+        
+    }
+    func openProfileForUser(withUID: String) {
+        if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "MyProfileViewController") as? MyProfileViewController {
+            if let navigator = self.parent?.navigationController {
+                vc.uidOfProfile = withUID
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                navigator.pushViewController(vc, animated: true)
+
+            }
+        }
+    }
     let defaults = UserDefaults.standard
     let locationManager = CLLocationManager()
     let regionRadius: CLLocationDistance = 2500
@@ -51,11 +268,14 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     @IBOutlet weak var peepAndEventNearYouLabel: UILabel!
     @IBOutlet weak var currentLocationLabel: UILabel!
     
-    @IBOutlet weak var segmentedControl: UISegmentedControl!
+    @IBOutlet weak var searchResultsTableView: UITableView!
     
+    var searchResults: [User] = []
     
     // For mobile ads
-    var adNativeUnit = "ca-app-pub-3940256099942544/3986624511" //ca-app-pub-2174656505812203/9454834911 (actual native)
+    var adNativeUnit = "ca-app-pub-2174656505812203/9454834911" //ca-app-pub-3940256099942544/3986624511 (test native)
+    
+    var mapsAdUnit = "ca-app-pub-2174656505812203/1968953879"
     
     // Admob variables
     var adiPath = 6 // Nth item for ads
@@ -71,12 +291,14 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     
     let isMinimalEnabled = true
     
+    
     private var db = Firestore.firestore()
     var searchTimer: Timer?
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         self.view.backgroundColor = hexStringToUIColor(hex: "#f5f5f5")
-        searchBar.styleComponents()
+        searchBar.styleSearchBar()
         searchBar.frame = CGRect(x: 20, y: 70, width: UIScreen.main.bounds.width - 40, height: 50)
         gradientView.frame = CGRect(x: 0, y: searchBar.frame.maxY+60, width: UIScreen.main.bounds.width, height: 250)
         gradientView.isUserInteractionEnabled = false
@@ -91,7 +313,6 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
             gradientView.frame = CGRect(x: 0, y: searchBar.frame.maxY+40, width: UIScreen.main.bounds.width, height: 150)
             currentLocationLabel.frame = CGRect(x: 0, y: searchBar.frame.maxY+20, width: UIScreen.main.bounds.width, height: 20)
             currentLocationLabel.isHidden = true
-            segmentedControl.frame = CGRect(x: 20, y: searchBar.frame.maxY+10, width: UIScreen.main.bounds.width - 40, height: 35)
             BottomgradientView.isHidden = true
 //            segmentedControl.backgroundColor = .white
 //            segmentedControl.selectedSegmentTintColor = hexStringToUIColor(hex: Constants.primaryColor)
@@ -134,6 +355,30 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         }
         
         mapView.delegate = self
+        if Constants.isDebugEnabled {
+//            var window : UIWindow = UIApplication.shared.keyWindow!
+//            window.showDebugMenu()
+            self.view.debuggingStyle = true
+        }
+        searchResultsTableView.delegate = self
+        searchResultsTableView.dataSource = self
+        searchResultsTableView.backgroundColor = .clear
+        searchResultsTableView.frame = CGRect(x: 10, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 20, height: UIScreen.main.bounds.height - searchBar.frame.maxY)
+        searchResultsTableView.rowHeight = 90
+        searchResultsTableView.separatorStyle = .none
+        
+        
+        
+        GADMobileAds.sharedInstance().requestConfiguration.testDeviceIdentifiers = [ "21fc2c59a4644776134ea95a8a67a320" ]
+        let multipleAdsOptions = GADMultipleAdsAdLoaderOptions()
+        multipleAdsOptions.numberOfAds = 2
+        
+        adLoader = GADAdLoader(adUnitID: mapsAdUnit,
+            rootViewController: self,
+            adTypes: [ .native ],
+            options: [multipleAdsOptions])
+        adLoader.delegate = self
+        adLoader.load(GADRequest())
     }
     func addPinUsing(location: CLLocationCoordinate2D, name: String, username: String, uid: String, imageUrl: String, type: String) {
         if type == "user" {
@@ -193,7 +438,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
                     self?.defaults.set(cityName, forKey: "city")
                     self?.defaults.set(stateName, forKey: "state")
                     self?.defaults.set(countryName, forKey: "country")
-                    self?.getUsersAndEventsInHomeTown()
+                    self?.getUsersInHomeTown()
                     DispatchQueue.main.async {
                         self?.currentLocationLabel.text = "\(cityName), \(stateName)"
                         
@@ -222,6 +467,37 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         let coordinateRegion = MKCoordinateRegion(center: location.coordinate,
                                                   latitudinalMeters: regionRadius * 2.0, longitudinalMeters: regionRadius * 2.0)
         mapView.setRegion(coordinateRegion, animated: true)
+    }
+    func getUsersInHomeTown() {
+        let city = defaults.string(forKey: "city")!
+        let state = defaults.string(forKey: "state")!
+        let country = defaults.string(forKey: "country")!
+        let user = Auth.auth().currentUser?.uid
+        
+        let locationsRef = db.collection("user-locations")
+        print("* finding users without id \(user! as! String)")
+        locationsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).whereField("uid", isNotEqualTo: user! ?? "").limit(to: 10).getDocuments() { (querySnapshot, err) in
+            if let err = err {
+                print("Error getting documents: \(err)")
+            } else {
+                
+                if querySnapshot!.isEmpty {
+                    print("* no users near by")
+                } else {
+                    for document in querySnapshot!.documents {
+//                        print("* got user near by: \(document.documentID) => \(document.data())")
+                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)).coordinate
+                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
+                        let fullName = document.data()["full_name"] as? String ?? ""
+                        print("* got user near by: \(document.documentID) => \(fullName)")
+                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "user")
+                        
+                    }
+                    self.locationManager.stopUpdatingLocation()
+                }
+                
+            }
+        }
     }
     func getUsersAndEventsInHomeTown() {
         let city = defaults.string(forKey: "city")!
@@ -331,12 +607,12 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         
     }
     func searchWith(term: String) {
-        let usersRef = db.collection("users")
-        
+        let usersRef = db.collection("user-locations")
+        searchResults.removeAll()
         let userID = Auth.auth().currentUser?.uid
         let end = "\(term.dropLast())\(nextChar(str: "\(term.last!)"))"
         //            .whereField("username", isLessThan: "\(term.dropLast())\(nextChar(str: "\(term.last!)"))")
-        usersRef.whereField("username", isGreaterThanOrEqualTo: term.lowercased()).whereField("username", isLessThan: end).limit(to: 3).getDocuments() { (querySnapshot, err) in
+        usersRef.whereField("username", isGreaterThanOrEqualTo: term.lowercased()).whereField("username", isLessThan: end).limit(to: 10).getDocuments() { (querySnapshot, err) in
             if let err = err {
                 print("Error getting documents: \(err)")
             } else {
@@ -346,7 +622,41 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
                 } else {
                     for document in querySnapshot!.documents {
                         print("* got user search results: \(document.documentID) => \(document.data())")
+                        let postVals = document.data() as? [String: Any]
+                        let userUID = postVals?["uid"] as? String ?? ""
+                        let username = postVals?["username"] as? String ?? ""
+                        let profileImageUrl = postVals?["profileImageURL"] as? String ?? ""
+                        let full_name = postVals?["full_name"] as? String ?? ""
+                        var locationString = "No location"
+                        if postVals?["city"] != nil {
+                            if postVals?["state"] != nil {
+                                locationString = "\(postVals?["city"] as! String), \(postVals?["state"] as! String)"
+                            }
+                        }
+                        var isValidStory = false
+                        if postVals?["latest_story_timestamp"] != nil {
+                            print("* user has a recent story: \(postVals?["latest_story_timestamp"])")
+                            if let timestamp: Timestamp = postVals?["latest_story_timestamp"] as? Timestamp {
+                                let story_date: Date = timestamp.dateValue()
+                                let timeToLive: TimeInterval = 60 * 60 * 24 // 60 seconds * 60 minutes * 24 hours
+                                print("* time since (hours): \(Date().timeIntervalSince(story_date))")
+                                let isExpired = Date().timeIntervalSince(story_date) >= timeToLive
+                                if isExpired != true {
+                                    print("* valid story!")
+                                    isValidStory = true
+                                }
+                            }
+                            
+                        }
+//                        let latest_story_timestamp =
+                        var userResult = User(uid: userUID, username: username, profileImageUrl: profileImageUrl, bio: "", followingCount: 0, followersCount: 0, postsCount: 0, fullname: full_name, hasValidStory: isValidStory, isFollowing: false)
+                        userResult.location = locationString
+                        self.searchResults.append(userResult)
+                        if document == querySnapshot!.documents.last {
+                            self.searchResultsTableView.reloadData()
+                        }
                     }
+                    
                 }
                 
             }
@@ -362,7 +672,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         }
         
         // reschedule the search: in 1.0 second, call the searchForKeyword method on the new textfield content
-        searchTimer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(searchForKeyword(_:)), userInfo: textField.text!, repeats: false)
+        searchTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(searchForKeyword(_:)), userInfo: textField.text!, repeats: false)
     }
     
     @objc func searchForKeyword(_ timer: Timer) {
@@ -372,7 +682,17 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         
         print("Searching for keyword \(keyword)")
         if keyword as! String != "" {
+            mapView.fadeOut()
+            if searchResultsTableView.alpha == 0  || searchResultsTableView.isHidden == true {
+                searchResultsTableView.fadeIn()
+            }
+            
+            Analytics.logEvent("search_for_user", parameters: nil)
             searchWith(term: keyword as! String)
+        } else {
+            searchResultsTableView.reloadData()
+            mapView.fadeIn()
+            searchResultsTableView.fadeOut()
         }
         
     }
@@ -469,7 +789,7 @@ extension CLLocation {
         let newCoordinate = CLLocationCoordinate2D(latitude: newLatitude, longitude: newLongitude)
 
         let newLocation = CLLocation(coordinate: newCoordinate, altitude: altitude, horizontalAccuracy: horizontalAccuracy, verticalAccuracy: verticalAccuracy, course: course, speed: speed, timestamp: Date())
-
+        print("* moved to new location")
         return newLocation
     }
 }
@@ -489,6 +809,7 @@ extension MapsViewController: MKMapViewDelegate {
         
         let uid = (view.annotation as! MapPin).uid
         print("* pin with uid \(uid) tapped")
+        openProfileForUser(withUID: uid)
     }
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         // Don't want to show a custom image if the annotation is the user's location.
@@ -509,97 +830,101 @@ extension MapsViewController: MKMapViewDelegate {
             av.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
             annotationView = av
         }
+//        annotationView?.canShowCallout = false
         let tmp = annotation as! MapPin
         
         if let annotationView = annotationView {
             // Configure your annotation view here
-            annotationView.canShowCallout = true
+            annotationView.canShowCallout = false
 //            annotationView.image = UIImage(named: "imm2.jpeg")
             let url = URL(string: tmp.imageUrl)
             annotationView.alpha = 0
             DispatchQueue.global().async {
-                let data = try? Data(contentsOf: url!) //make sure your image in this url does exist, otherwise unwrap in a if let check / try-catch
-                DispatchQueue.main.async {
-                    annotationView.frame.size = CGSize(width: 45, height: 70)
-                    
-                    let profileImageView = UIImageView(frame: CGRect(x: 0, y: 3, width: annotationView.frame.width - 3, height: annotationView.frame.width - 3))
-                    profileImageView.image = UIImage(data: data!)
-                    profileImageView.frame.size = CGSize(width: 45, height: 45)
-                    profileImageView.contentMode = .scaleAspectFill
-                    profileImageView.layer.cornerRadius = Constants.borderRadius
-                    profileImageView.clipsToBounds = true
-                    if tmp.type == "user" {
-                        profileImageView.layer.borderColor = self.hexStringToUIColor(hex:"\(Constants.primaryColor)").cgColor
-                        profileImageView.layer.borderWidth = 3
-                        annotationView.insertSubview(profileImageView, at: 0)
-    //                    annotationView.layer.masksToBounds = true
+                if let url = url {
+                    let data = try? Data(contentsOf: url) //make sure your image in this url does exist, otherwise unwrap in a if let check / try-catch
+                    DispatchQueue.main.async {
+                        annotationView.frame.size = CGSize(width: 45, height: 70)
                         
-                        /*Make name label*/
-                        let nameLabel = UILabel(frame: CGRect(x: -15, y: profileImageView.frame.height + 7, width: 80, height: 16))
-                        nameLabel.backgroundColor = self.hexStringToUIColor(hex: Constants.secondaryColor)
-                        nameLabel.text = tmp.title
-                        nameLabel.sizeToFit()
-                        nameLabel.center.x = annotationView.frame.width / 2
-                        nameLabel.textColor = self.hexStringToUIColor(hex: Constants.primaryColor)
-                        nameLabel.textAlignment = .center
-                        nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
-                        nameLabel.layer.cornerRadius = 4
-                        nameLabel.clipsToBounds = true
+                        let profileImageView = UIImageView(frame: CGRect(x: 0, y: 3, width: annotationView.frame.width - 3, height: annotationView.frame.width - 3))
+                        profileImageView.image = UIImage(data: data!)
+                        profileImageView.frame.size = CGSize(width: 45, height: 45)
+                        profileImageView.contentMode = .scaleAspectFill
+                        profileImageView.layer.cornerRadius = Constants.borderRadius
+                        profileImageView.clipsToBounds = true
+                        if tmp.type == "user" {
+                            profileImageView.layer.borderColor = self.hexStringToUIColor(hex:"\(Constants.primaryColor)").cgColor
+                            profileImageView.layer.borderWidth = 3
+                            annotationView.insertSubview(profileImageView, at: 0)
+        //                    annotationView.layer.masksToBounds = true
+                            
+                            /*Make name label*/
+                            let nameLabel = UILabel(frame: CGRect(x: -15, y: profileImageView.frame.height + 7, width: 80, height: 16))
+                            nameLabel.backgroundColor = self.hexStringToUIColor(hex: Constants.secondaryColor)
+                            nameLabel.text = tmp.title
+                            nameLabel.sizeToFit()
+                            nameLabel.center.x = annotationView.frame.width / 2
+                            nameLabel.textColor = self.hexStringToUIColor(hex: Constants.primaryColor)
+                            nameLabel.textAlignment = .center
+                            nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+                            nameLabel.layer.cornerRadius = 4
+                            nameLabel.clipsToBounds = true
 
-                            /*Set circle's tag to 1*/
-                        nameLabel.accessibilityLabel = tmp.uid
-                            /*Add the circle beneath the annotation*/
-                        annotationView.insertSubview(nameLabel, at: 0)
-                        annotationView.fadeIn()
-                    } else if tmp.type == "group" {
-                        profileImageView.layer.borderColor = self.hexStringToUIColor(hex:"\(Constants.groupPrimaryColor)").cgColor
-                        profileImageView.layer.borderWidth = 3
-                        annotationView.insertSubview(profileImageView, at: 0)
-    //                    annotationView.layer.masksToBounds = true
+                                /*Set circle's tag to 1*/
+                            nameLabel.accessibilityLabel = tmp.uid
+                                /*Add the circle beneath the annotation*/
+                            annotationView.insertSubview(nameLabel, at: 0)
+                            annotationView.fadeIn()
+                        } else if tmp.type == "group" {
+                            profileImageView.layer.borderColor = self.hexStringToUIColor(hex:"\(Constants.groupPrimaryColor)").cgColor
+                            profileImageView.layer.borderWidth = 3
+                            annotationView.insertSubview(profileImageView, at: 0)
+        //                    annotationView.layer.masksToBounds = true
+                            
+                            /*Make name label*/
+                            let nameLabel = UILabel(frame: CGRect(x: -15, y: profileImageView.frame.height + 7, width: 80, height: 16))
+                            nameLabel.backgroundColor = self.hexStringToUIColor(hex: Constants.groupSecondaryColor)
+                            nameLabel.text = tmp.title
+                            nameLabel.sizeToFit()
+                            nameLabel.center.x = annotationView.frame.width / 2
+                            nameLabel.textColor = self.hexStringToUIColor(hex: Constants.groupPrimaryColor)
+                            nameLabel.textAlignment = .center
+                            nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+                            nameLabel.layer.cornerRadius = 4
+                            nameLabel.clipsToBounds = true
+
+                                /*Set circle's tag to 1*/
+                            nameLabel.accessibilityLabel = tmp.uid
+                                /*Add the circle beneath the annotation*/
+                            annotationView.insertSubview(nameLabel, at: 0)
+                            annotationView.fadeIn()
+                        } else if tmp.type == "event" {
+                            profileImageView.layer.borderColor = self.hexStringToUIColor(hex:"\(Constants.eventPrimaryColor)").cgColor
+                            profileImageView.layer.borderWidth = 3
+                            annotationView.insertSubview(profileImageView, at: 0)
+        //                    annotationView.layer.masksToBounds = true
+                            
+                            /*Make name label*/
+                            let nameLabel = UILabel(frame: CGRect(x: -15, y: profileImageView.frame.height + 7, width: 80, height: 16))
+                            nameLabel.backgroundColor = self.hexStringToUIColor(hex: Constants.eventSecondaryColor)
+                            nameLabel.text = tmp.title
+                            nameLabel.sizeToFit()
+                            nameLabel.center.x = annotationView.frame.width / 2
+                            nameLabel.textColor = self.hexStringToUIColor(hex: Constants.eventPrimaryColor)
+                            nameLabel.textAlignment = .center
+                            nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+                            nameLabel.layer.cornerRadius = 4
+                            nameLabel.clipsToBounds = true
+
+                                /*Set circle's tag to 1*/
+                            nameLabel.accessibilityLabel = tmp.uid
+                                /*Add the circle beneath the annotation*/
+                            annotationView.insertSubview(nameLabel, at: 0)
+                            annotationView.fadeIn()
+                        }
                         
-                        /*Make name label*/
-                        let nameLabel = UILabel(frame: CGRect(x: -15, y: profileImageView.frame.height + 7, width: 80, height: 16))
-                        nameLabel.backgroundColor = self.hexStringToUIColor(hex: Constants.groupSecondaryColor)
-                        nameLabel.text = tmp.title
-                        nameLabel.sizeToFit()
-                        nameLabel.center.x = annotationView.frame.width / 2
-                        nameLabel.textColor = self.hexStringToUIColor(hex: Constants.groupPrimaryColor)
-                        nameLabel.textAlignment = .center
-                        nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
-                        nameLabel.layer.cornerRadius = 4
-                        nameLabel.clipsToBounds = true
-
-                            /*Set circle's tag to 1*/
-                        nameLabel.accessibilityLabel = tmp.uid
-                            /*Add the circle beneath the annotation*/
-                        annotationView.insertSubview(nameLabel, at: 0)
-                        annotationView.fadeIn()
-                    } else if tmp.type == "event" {
-                        profileImageView.layer.borderColor = self.hexStringToUIColor(hex:"\(Constants.eventPrimaryColor)").cgColor
-                        profileImageView.layer.borderWidth = 3
-                        annotationView.insertSubview(profileImageView, at: 0)
-    //                    annotationView.layer.masksToBounds = true
-                        
-                        /*Make name label*/
-                        let nameLabel = UILabel(frame: CGRect(x: -15, y: profileImageView.frame.height + 7, width: 80, height: 16))
-                        nameLabel.backgroundColor = self.hexStringToUIColor(hex: Constants.eventSecondaryColor)
-                        nameLabel.text = tmp.title
-                        nameLabel.sizeToFit()
-                        nameLabel.center.x = annotationView.frame.width / 2
-                        nameLabel.textColor = self.hexStringToUIColor(hex: Constants.eventPrimaryColor)
-                        nameLabel.textAlignment = .center
-                        nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
-                        nameLabel.layer.cornerRadius = 4
-                        nameLabel.clipsToBounds = true
-
-                            /*Set circle's tag to 1*/
-                        nameLabel.accessibilityLabel = tmp.uid
-                            /*Add the circle beneath the annotation*/
-                        annotationView.insertSubview(nameLabel, at: 0)
-                        annotationView.fadeIn()
                     }
-                    
                 }
+                
             }
 //            annotationView.frame.size = CGSize(width: 30, height: 30)
         }

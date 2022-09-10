@@ -12,17 +12,11 @@ import FirebaseCore
 import FirebaseFirestore
 import FirebaseStorage
 import FirebaseAuth
+import Loady
+import FirebaseAnalytics
 
-
-class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UITextViewDelegate, UITextFieldDelegate, UITableViewDelegate, UITableViewDataSource, MKLocalSearchCompleterDelegate, UIImagePickerControllerDelegate & UINavigationControllerDelegate {
+class CameraViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UITextViewDelegate, UITextFieldDelegate, UITableViewDelegate, UITableViewDataSource, MKLocalSearchCompleterDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
-    func doneEditing(image: UIImage) {
-        
-    }
-    
-    func canceledEditing() {
-        
-    }
     
 
     static let nextLevelAlbumTitle = "NextLevel"
@@ -49,7 +43,7 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
     internal var saveButton: UIButton?
     internal var photoGallery: UIButton?
     internal var closeButton: UIButton?
-    internal var actualPostButton: UIButton?
+    internal var actualPostButton: LoadyButton?
     
     internal var locationSearchResults: UITableView?
     var searchCompleter = MKLocalSearchCompleter()
@@ -130,6 +124,8 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
     
     let locationManager = CLLocationManager()
     let imagePicker = UIImagePickerController()
+    
+    var uploadedFromCameraRoll = false
 
     // MARK: - object lifecycle
     public override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
@@ -146,8 +142,12 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
     // MARK: - view lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        let loader = ColorCubeLoader(bundle: .main)
+        let filters: [FilterColorCube]? = try? loader.load()
+
+    ColorCubeStorage.default.filters = filters ?? []
         imagePicker.delegate = self
-        imagePicker.allowsEditing = true
+        imagePicker.allowsEditing = false
         imagePicker.mediaTypes = ["public.image"]
         imagePicker.sourceType = .photoLibrary
         searchCompleter.delegate = self
@@ -191,9 +191,9 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
             longPressGestureRecognizer.allowableMovement = 10.0
             recordButton.addGestureRecognizer(longPressGestureRecognizer)
         }
-        self.actualPostButton = UIButton(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
+        self.actualPostButton = LoadyButton(frame: .zero)
         if let actualPostButton = actualPostButton {
-            actualPostButton.backgroundColor = hexStringToUIColor (hex:Constants.primaryColor)
+//            actualPostButton.backgroundColor = hexStringToUIColor (hex:Constants.primaryColor)
             actualPostButton.layer.cornerRadius = 4
             actualPostButton.layer.shadowColor = hexStringToUIColor (hex:Constants.primaryColor).withAlphaComponent(0.3).cgColor
             actualPostButton.layer.shadowOffset = CGSize(width: 4, height: 10)
@@ -202,6 +202,8 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
             actualPostButton.titleLabel!.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
             actualPostButton.setTitle("Post", for: .normal)
             actualPostButton.alpha = 0
+            actualPostButton.titleLabel?.textColor = .white
+            actualPostButton.backgroundColor = hexStringToUIColor(hex:Constants.primaryColor)
             actualPostButton.addTarget(self, action: #selector(handlePostButton(_:)), for: .touchUpInside)
             self.view.addSubview(actualPostButton)
         }
@@ -329,17 +331,20 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
             if let AddPeopleTextField = AddPeopleTextField {
                 AddPeopleTextField.backgroundColor = .clear
                 AddPeopleTextField.font = UIFont(name: Constants.globalFont, size: 14)
-                AddPeopleTextField.attributedPlaceholder = NSAttributedString(string: "Tag Other People",
+                AddPeopleTextField.attributedPlaceholder = NSAttributedString(string: "Tag People - Coming soon :P",
                                              attributes: [NSAttributedString.Key.foregroundColor: UIColor.lightGray])
                 AddPeopleTextField.textColor = .white
+                AddPeopleTextField.isUserInteractionEnabled = false
 //                AddPeopleTextField.delegate = self
 //                AddPeopleTextField.addTarget(self, action: #selector(handleLocationViewTapped(_:)), for: .touchDown)
 //                AddPeopleTextField.addTarget(self, action: #selector(CameraViewController.textFieldDidChange(_:)), for: .editingChanged)
                 AddPeopleView.addSubview(AddPeopleTextField)
             }
-            AddPeopleView.backgroundColor = .darkGray.withAlphaComponent(0.5)
+            //            AddPeopleView.backgroundColor = .darkGray.withAlphaComponent(0.5)
+            AddPeopleView.backgroundColor = .darkGray.withAlphaComponent(0.2)
             AddPeopleView.layer.cornerRadius = 4
             AddPeopleView.alpha = 0
+            AddPeopleView.isUserInteractionEnabled = false
             rightArrowPeople = UIImageView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
             if let rightArrowPeople = rightArrowPeople {
                 rightArrowPeople.image = UIImage(systemName: "chevron.right")?.applyingSymbolConfiguration(.init(pointSize: 10, weight: .light, scale: .small))
@@ -361,7 +366,7 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
                 addTagsIcon.contentMode = .scaleAspectFit
                 addTagsIcon.layer.cornerRadius = 4
 //                let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(backAddressTapped(tapGestureRecognizer:)))
-//                addPeopleIcon.isUserInteractionEnabled = true
+                AddTagsView.isUserInteractionEnabled = false
 //                addPeopleIcon.addGestureRecognizer(tapGestureRecognizer)
                 AddTagsView.addSubview(addTagsIcon)
             }
@@ -369,17 +374,20 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
             if let AddTagsTextField = AddTagsTextField {
                 AddTagsTextField.backgroundColor = .clear
                 AddTagsTextField.font = UIFont(name: Constants.globalFont, size: 14)
-                AddTagsTextField.attributedPlaceholder = NSAttributedString(string: "Post Hashtags",
+                AddTagsTextField.attributedPlaceholder = NSAttributedString(string: "Hashtags - Coming soon :P",
                                              attributes: [NSAttributedString.Key.foregroundColor: UIColor.lightGray])
                 AddTagsTextField.textColor = .white
+                AddTagsTextField.isUserInteractionEnabled = false
 //                AddPeopleTextField.delegate = self
 //                AddPeopleTextField.addTarget(self, action: #selector(handleLocationViewTapped(_:)), for: .touchDown)
 //                AddPeopleTextField.addTarget(self, action: #selector(CameraViewController.textFieldDidChange(_:)), for: .editingChanged)
                 AddTagsView.addSubview(AddTagsTextField)
             }
-            AddTagsView.backgroundColor = .darkGray.withAlphaComponent(0.5)
+//            AddTagsView.backgroundColor = .darkGray.withAlphaComponent(0.5)
+            AddTagsView.backgroundColor = .darkGray.withAlphaComponent(0.2)
             AddTagsView.layer.cornerRadius = 4
             AddTagsView.alpha = 0
+            AddTagsView.isUserInteractionEnabled = false
 //            let locationTapped = UITapGestureRecognizer(target: self, action: #selector(handleLocationViewTapped(_:)))
 //            AddLocationView.addGestureRecognizer(locationTapped)
 //            AddLocationTextField?.addGestureRecognizer(locationTapped)
@@ -395,20 +403,25 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
         }
         self.flashButton = UIButton(type: .custom)
         if let flashButton = self.flashButton {
-            flashButton.setImage(UIImage(named: "flash_auto")?.applyingSymbolConfiguration(.init(pointSize: 20, weight: .bold, scale: .medium)), for: .normal)
+            flashButton.setImage(UIImage(systemName: "bolt.badge.a.fill")?.applyingSymbolConfiguration(.init(pointSize: 20, weight: .bold, scale: .medium)), for: .normal)
             flashButton.addTarget(self, action: #selector(handleFlashButton(_:)), for: .touchUpInside)
             
 //            flashButton.imageView?.contentMode = .scaleAspectFit
-            flashButton.frame = CGRect(x: UIScreen.main.bounds.width - 20 - 30, y: (previewView?.frame.minY)! + 20, width: 30, height: 30)
+            flashButton.frame = CGRect(x: UIScreen.main.bounds.width - 20 - 40, y: (previewView?.frame.minY)! + 20, width: 40, height: 40)
             flashButton.setTitleColor(.white, for: .normal)
             flashButton.tintColor = .white
             flashButton.backgroundColor = .clear
+//            toggleTorch(on: true)
 //            flashButton.setTitle("Auto", for: .normal)
-            currentFlashMode = .auto
             print("adding flash button")
+            print(" is flash mode available: \(NextLevel.shared.isFlashAvailable)")
+            print(" is torch mode available: \(NextLevel.shared.isTorchAvailable)")
+            if NextLevel.shared.isFlashAvailable == false || NextLevel.shared.isTorchAvailable == false {
+                flashButton.setImage(UIImage(systemName: "bolt.slash.fill")?.applyingSymbolConfiguration(.init(pointSize: 20, weight: .bold, scale: .medium)), for: .normal)
+            }
             let flashToggle = UITapGestureRecognizer(target: self, action: #selector(handleFlashButton(_:)))
             flashButton.addGestureRecognizer(flashToggle)
-//            self.view.addSubview(flashButton)
+            self.view.addSubview(flashButton)
             
         }
         self.goBackButton = UIButton(type: .custom)
@@ -593,28 +606,55 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
         NextLevel.shared.flipCaptureDevicePosition()
         searchCompleter.resultTypes = MKLocalSearchCompleter.ResultType([.pointOfInterest])
     }
+    func toggleTorch(on: Bool) {
+        guard
+            let device = AVCaptureDevice.default(for: AVMediaType.video),
+            device.hasTorch
+        else { return }
+
+        do {
+            try device.lockForConfiguration()
+            device.torchMode = on ? .on : .off
+            device.unlockForConfiguration()
+        } catch {
+            print("Torch could not be used")
+        }
+    }
     func randomString(length: Int) -> String {
       let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
       return String((0..<length).map{ _ in letters.randomElement()! })
     }
-    func uploadPostMedia(completion: @escaping (_ url: String?) -> Void) {
+    func uploadPostMedia(completion: @escaping (_ url: String?, _ locationUID: String?) -> Void) {
         let userID : String = (Auth.auth().currentUser?.uid)!
-        let storageRef = Storage.storage().reference().child("post_photos/\(userID)/\(randomString(length: 20))")
-        guard let imageData = cameraPhotoResult!.image!.jpegData(compressionQuality: 0.75) else { return }
+        let randomString = randomString(length: 20)
+        let storageRef = Storage.storage().reference().child("post_photos/\(userID)/\(randomString)")
+//        guard let imageData = cameraPhotoResult!.image!.jpegData(compressionQuality: 0.75) else { return }
+        print("* cropped image")
+        guard let imageData = cameraPhotoResult!.image!.nx_croppedImage(to: 1.25).jpegData(compressionQuality: 0.75) else { return }
         let metaData = StorageMetadata()
         metaData.contentType = "image/jpg"
+        // Add a progress observer to an upload task
         
-        storageRef.putData(imageData, metadata: metaData) { metaData, error in
+        let uploadTask = storageRef.putData(imageData, metadata: metaData) { metaData, error in
             if error == nil, metaData != nil {
                 
                 storageRef.downloadURL { url, error in
-                    completion(url?.absoluteString)
+                    completion(url?.absoluteString, randomString)
                     // success!
                 }
             } else {
                 // failed
-                completion(nil)
+                completion(nil, nil)
             }
+        }
+        let observer = uploadTask.observe(.progress) { snapshot in
+          // A progress event occured
+            let percentComplete = 100.0 * Double(snapshot.progress!.completedUnitCount)
+                        / Double(snapshot.progress!.totalUnitCount)
+            let floatComplete = Double(snapshot.progress!.completedUnitCount)
+            / Double(snapshot.progress!.totalUnitCount)
+            print("* uploading: \(percentComplete)")
+            self.actualPostButton?.update(percent: percentComplete)
         }
         
     }
@@ -654,10 +694,54 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
         
     }
     @objc internal func handleGalaryTapped(_ view: UIView) {
-        imagePicker.sourceType = .photoLibrary
-            present(imagePicker, animated: true)
+//        imagePicker.sourceType = .photoLibrary
+        
+//            present(imagePicker, animated: true)
+        let config = ZLPhotoConfiguration.default()
+        config.columnCount = 3
+        config.maxSelectCount = 9
+        config.sortAscending = true
+        config.allowSelectVideo = false
+        config.showSelectedBorder = true
+        config.cellCornerRadio = 8
+        config.allowSelectOriginal = false
+        config.saveNewImageAfterEdit = false
+        config.editImageConfiguration.clipRatios = [ZLImageClipRatio(title: "Default", whRatio: 1.25)]
+//        hideAllPhotoComponents()
+        let ps = ZLPhotoPreviewSheet()
+        ps.selectImageBlock = { [weak self] results, isOriginal in
+            guard let `self` = self else { return }
+//            self.selectedImages = results.map { $0.image }
+//            self.selectedAssets = results.map { $0.asset }
+//            self.isOriginal = isOriginal
+//            self.collectionView.reloadData()
+            debugPrint("# images: \(results.count)")
+//            debugPrint("assets: \(self.selectedAssets)")
+            debugPrint("isEdited: \(results.map { $0.isEdited })")
+            debugPrint("isOriginal: \(isOriginal)")
+            if results.count != 0 {
+//                self.showPostDetailOptions()
+                if self.postType == "post" {
+                    self.cameraPhotoResult = UIImageView(image: results[0].image)
+                    print("* preview frame: \(self.previewView!.frame)")
+                    self.cameraPhotoResult?.frame = self.previewView!.frame
+                    self.cameraPhotoResult?.layer.cornerRadius = (self.previewView?.layer.cornerRadius)!
+                    self.cameraPhotoResult?.clipsToBounds = true
+                    self.uploadedFromCameraRoll = true
+                    self.hideAllPhotoComponents()
+                    self.showPostDetailOptions()
+                    self.goBackButton?.fadeIn()
+                    self.stepNameLabel?.fadeIn()
+                } else {
+                    print("* story post")
+                    
+                }
+            }
+            
+        }
+        ps.showPhotoLibrary(sender: self)
     }
-    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
+    func imagePickerController(didFinishPickingMediaWithInfo info: [String : Any]) {
         
         print("* finished picking photo")
 //        let imageURL = info[UIImagePickerControllerImageURL] as? URL
@@ -673,6 +757,50 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
 //        }
 //
         dismiss(animated: true, completion: nil)
+    }
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        if let image = info[.originalImage] as? UIImage {
+            cameraPhotoResult = UIImageView(image: image)
+            cameraPhotoResult?.frame = previewView!.frame
+            cameraPhotoResult?.layer.cornerRadius = (self.previewView?.layer.cornerRadius)!
+            cameraPhotoResult?.clipsToBounds = true
+            self.imagePicker.dismiss(animated: true, completion: nil)
+            uploadedFromCameraRoll = true
+            hideAllPhotoComponents()
+            if postType == "post" {
+//                showPhotoPostComponents()
+                // create controller for brightroom
+                // Create an image provider
+                let imageProvider = ImageProvider(image: image) // URL, Data are also supported.
+                
+                let stack = EditingStack.init(
+                  imageProvider: imageProvider
+                )
+                print("* presenting editing stack")
+                self._present(stack, square: false)
+                
+            } else if postType == "story" {
+                let photoEditor = PhotoEditorViewController(nibName:"PhotoEditorViewController",bundle: Bundle(for: PhotoEditorViewController.self))
+
+                //PhotoEditorDelegate
+                photoEditor.photoEditorDelegate = self
+
+                //The image to be edited
+                photoEditor.image = image
+
+                //Optional: To hide controls - array of enum control
+                photoEditor.hiddenControls = [.crop, .share, .sticker]
+
+                //Optional: Colors for drawing and Text, If not set default values will be used
+//                photoEditor.colors = [.red,.blue,.green]
+                
+                //Present the View Controller
+                present(photoEditor, animated: false, completion: nil)
+            }
+//            self.imagePreview.image = image
+        }
+
+        
     }
     @objc internal func handleLocationViewTapped(_ view: UIView) {
         print("* location view tapped, moving stuff around")
@@ -704,14 +832,21 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
         }
     }
     @objc internal func handleFlashButton(_ button: UIButton) {
-        if self.currentFlashMode == .auto {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+        if NextLevel.shared.flashMode == .auto {
+            print("* setting flash mode to on")
             NextLevel.shared.flashMode = .on
-            flashButton?.setImage(UIImage(named: "flash_on"), for: .normal)
-        } else if currentFlashMode == .on {
+            flashButton?.setImage(UIImage(systemName: "bolt.fill")?.applyingSymbolConfiguration(.init(pointSize: 20, weight: .bold, scale: .medium)), for: .normal)
+        } else if NextLevel.shared.flashMode == .on {
             NextLevel.shared.flashMode = .off
+            
+            print("* setting flash mode to off")
+            flashButton?.setImage(UIImage(systemName: "bolt.slash.fill")?.applyingSymbolConfiguration(.init(pointSize: 20, weight: .bold, scale: .medium)), for: .normal)
         } else {
+            print("* setting flash mode to auto")
             NextLevel.shared.flashMode = .auto
-            flashButton?.setImage(UIImage(named: "flash_auto"), for: .normal)
+            flashButton?.setImage(UIImage(systemName: "bolt.badge.a.fill")?.applyingSymbolConfiguration(.init(pointSize: 20, weight: .bold, scale: .medium)), for: .normal)
         }
         
     }
@@ -749,52 +884,74 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
         locationSearchResults?.reloadData()
     }
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return searchCompleter.results.count
+        return searchCompleter.results.count + 1
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let mapItem = searchCompleter.results[indexPath.row]
-        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-        
-        cell.textLabel?.attributedText = highlightedText(mapItem.title, inRanges: mapItem.titleHighlightRanges, size: 17.0)
-        cell.detailTextLabel?.text = mapItem.subtitle
-        cell.contentView.backgroundColor = UIColor.black
-        cell.detailTextLabel?.textColor = .lightGray
-        
-        return cell
+        if indexPath.row != 0 {
+            
+            let mapItem = searchCompleter.results[indexPath.row-1]
+            print("* making text: \(mapItem.title)")
+            let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+            
+            cell.textLabel?.attributedText = highlightedText(mapItem.title, inRanges: mapItem.titleHighlightRanges, size: 17.0)
+            cell.detailTextLabel?.text = mapItem.subtitle
+            cell.contentView.backgroundColor = UIColor.black
+            cell.detailTextLabel?.textColor = .lightGray
+            
+            return cell
+        } else {
+            let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+            print("* making default: \(AddLocationTextField?.text ?? "")")
+            cell.textLabel?.text = AddLocationTextField?.text ?? ""
+            cell.detailTextLabel?.text = ""
+            cell.textLabel?.textColor = .white
+            if let font = UIFont(name: "\(String(describing: cell.textLabel?.font))", size: 16) {
+                cell.textLabel?.font = font
+            }
+            
+            cell.contentView.backgroundColor = UIColor.black
+            cell.detailTextLabel?.textColor = .lightGray
+            
+            return cell
+        }
     }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
-        print("* Selected at \(searchCompleter.results[indexPath.row].title)")
-        print(searchCompleter.results[indexPath.row].subtitle)
-        let currentLat = self.locationManager.location!.coordinate.latitude
-        let currentLong = self.locationManager.location!.coordinate.longitude
-        let geoCoder = CLGeocoder()
-        geoCoder.geocodeAddressString(searchCompleter.results[indexPath.row].subtitle) { (placemarks, error) in
-            guard
-                let placemarks = placemarks,
-                let location = placemarks.first?.location
-            else {
-                // handle no location found
-                return
+        if indexPath.row != 0 {
+            print("* Selected at \(searchCompleter.results[indexPath.row-1].title)")
+            print(searchCompleter.results[indexPath.row-1].subtitle)
+    //        let currentLat = self.locationManager.location!.coordinate.latitude
+    //        let currentLong = self.locationManager.location!.coordinate.longitude
+            let geoCoder = CLGeocoder()
+            geoCoder.geocodeAddressString(searchCompleter.results[indexPath.row-1].subtitle) { (placemarks, error) in
+                guard
+                    let placemarks = placemarks,
+                    let location = placemarks.first?.location
+                else {
+                    // handle no location found
+                    return
+                }
+                
+                // Use your location
+                let distanceInMeters = location.distance(from: self.locationManager.location!)
+                print("* got distance in meters from current location: \(distanceInMeters)")
+                if(distanceInMeters <= 1609)
+                 {
+                 // under 1 mile
+                    self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row-1].title)"
+                    self.distanceAway?.text = "\(Int(distanceInMeters*3.28084)) feet away"
+                 }
+                 else
+                {
+                 // out of 1 mile
+                     self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row-1].title)"
+                     self.distanceAway?.text = "\(Int(distanceInMeters*0.000621371)) miles away"
+                 }
             }
+        } else {
             
-            // Use your location
-            let distanceInMeters = location.distance(from: self.locationManager.location!)
-            print("* got distance in meters from current location: \(distanceInMeters)")
-            if(distanceInMeters <= 1609)
-             {
-             // under 1 mile
-                self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row].title)"
-                self.distanceAway?.text = "\(Int(distanceInMeters*3.28084)) feet away"
-             }
-             else
-            {
-             // out of 1 mile
-                 self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row].title)"
-                 self.distanceAway?.text = "\(Int(distanceInMeters*0.000621371)) miles away"
-             }
         }
         let dif = 15
         AddLocationTextField!.frame = CGRect(x: Int((addLocationIcon?.frame.maxX)! + CGFloat(dif)), y: dif-5, width: Int((AddLocationView?.frame.width)! - (addLocationIcon?.frame.maxY)!) - 10, height: 50-dif*2)
@@ -846,6 +1003,7 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
             UIView.animate(withDuration: 0.3, animations: {
                     self.view.layoutIfNeeded() // add this
                 self.previewView?.frame = CGRect(x: (self.previewView?.frame.minX)!, y: (self.closeButton?.frame.maxY)! + 20, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.25)
+                NextLevel.shared.previewLayer.frame = self.previewView!.bounds
 //                self.previewView?.frame = CGRect(x: (self.previewView?.frame.minX)!, y: (self.previewView?.frame.minY)!, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.4)
                 let snapX = (Int(Float16(UIScreen.main.bounds.width)) / 2) - ((80) / 2)
                 self.snapPicButton?.frame = CGRect(x: snapX, y: Int((self.previewView?.frame.maxY)!) + 30, width: 80, height: 80)
@@ -855,7 +1013,7 @@ class CameraViewController: UIViewController, PhotoEditorDelegate, UICollectionV
 //                let snapPicY =  Int((self.previewView?.frame.maxY)!)
 //                self.snapPicButton?.frame = CGRect(x: snapX, y: snapPicY, width: snapPicWidthHeight, height: snapPicWidthHeight)
 //                self.snapPicButton?.layer.cornerRadius = CGFloat(snapPicWidthHeight / 2)
-//                NextLevel.shared.previewLayer.frame = self.previewView!.bounds
+//
 //                NextLevel.shared.videoConfiguration.aspectRatio = .instagram
                 }) { (success) in
                     
@@ -1211,6 +1369,7 @@ extension CameraViewController {
         DispatchQueue.main.async {
             NextLevel.shared.stop()
             self.previewView?.fadeOut()
+            self.flashButton?.fadeOut()
             self.snapPicButton?.fadeOut()
             self.menubarUIView?.fadeOut()
             self.closeButton?.fadeOut()
@@ -1220,7 +1379,16 @@ extension CameraViewController {
         
     }
     func showAllPhotoComponents() {
-        
+        DispatchQueue.main.async {
+            try? NextLevel.shared.start()
+            self.previewView?.fadeIn()
+            self.snapPicButton?.fadeIn()
+            self.menubarUIView?.fadeIn()
+            self.closeButton?.fadeIn()
+            self.flashButton?.fadeIn()
+            
+//            self.cameraPhotoResult?.fadeIn()
+        }
     }
     func showStoryPostComponents() {
         let photoEditor = PhotoEditorViewController(nibName:"PhotoEditorViewController",bundle: Bundle(for: PhotoEditorViewController.self))
@@ -1339,8 +1507,23 @@ extension CameraViewController {
                 }
             }
         } else if stepName == "New Post" {
-            hidePostDetailsOptions()
-//            getNearbyPlaces()
+//            hidePostDetailsOptions()
+            UIView.animate(withDuration: 0.3, animations: { [self] in
+                self.view.layoutIfNeeded()
+                actualPostButton?.alpha = 0
+                goBackButton?.alpha = 0
+                cameraPhotoResult?.alpha = 0
+                captionView?.alpha = 0
+                stepNameLabel?.alpha = 0
+                AddPeopleView?.alpha = 0
+                AddLocationView?.alpha = 0
+                AddTagsView?.alpha = 0
+                
+            }) { [self] (success) in
+                self.view.layoutIfNeeded()
+                self.showAllPhotoComponents()
+            }
+           
             
         }
     }
@@ -1356,7 +1539,8 @@ extension CameraViewController {
         //                self.stepNameLabel?.text = "Edit Photo"
         //                self.stepNameLabel?.fadeIn()
         //                self.nextButton?.fadeIn()
-        self.actualPostButton?.frame = self.nextButton!.frame
+//        self.actualPostButton?.frame = self.nextButton!.frame
+        self.actualPostButton?.frame = CGRect(x: 40, y: UIScreen.main.bounds.height - 53 - 40, width: UIScreen.main.bounds.width - 80, height: 53)
         self.actualPostButton?.fadeIn()
         let previewWidth = 100
         self.goBackButton?.fadeIn()
@@ -1427,32 +1611,193 @@ extension CameraViewController {
         }
             
     }
-    @objc internal func handlePostButton(_ button: UIButton)
+    func checkForSFW(isAdult: String, isMedical: String, isRacy: String, isViolent: String) -> Bool {
+        let checkForAdult = (isAdult == "LIKELY" || isAdult == "VERY_LIKELY") == false
+        let checkForMedical = (isMedical == "LIKELY" || isMedical == "VERY_LIKELY") == false
+        let checkForViolence = (isViolent == "LIKELY" || isViolent == "VERY_LIKELY") == false
+        
+        return checkForAdult && checkForMedical && checkForViolence
+    }
+    func disableInteraction() {
+        captionView?.isUserInteractionEnabled = false
+        AddTagsView?.isUserInteractionEnabled = false
+        AddLocationView?.isUserInteractionEnabled = false
+        goBackButton?.isUserInteractionEnabled = false
+        AddPeopleView?.isUserInteractionEnabled = false
+    }
+    @objc internal func handlePostButton(_ button: UIButton) {
+        print("* posting photo")
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        actualPostButton?.isUserInteractionEnabled = false
+        actualPostButton?.setAnimation(LoadyAnimationType.backgroundHighlighter())
+        actualPostButton?.backgroundColor = hexStringToUIColor(hex: Constants.secondaryColor)
+        actualPostButton?.backgroundFillColor = hexStringToUIColor(hex: Constants.primaryColor)
+        // starts loading animation
+        actualPostButton?.startLoading()
+        self.actualPostButton?.setTitle("Uploading", for: .normal)
+        let userID : String = (Auth.auth().currentUser?.uid)!
+        uploadPostMedia() { url, locationUID in
+            guard let url = url else { return }
+            guard let locationUID = locationUID else {
+                return
+            }
+//            actualPostButton?.update(percent: snapshot.progress)
+            self.actualPostButton?.stopLoading()
+            self.actualPostButton?.setTitle("One moment...", for: .normal)
+            self.actualPostButton?.backgroundColor = self.hexStringToUIColor(hex: Constants.secondaryColor)
+            self.actualPostButton?.titleLabel?.textColor = self.hexStringToUIColor(hex: Constants.primaryColor)
+            self.actualPostButton?.tintColor = self.hexStringToUIColor(hex: Constants.primaryColor)
+            
+            let timestamp = NSDate().timeIntervalSince1970
+            let ref = self.db.collection("posts").document(userID).collection("posts").document()
+            let documentId = ref.documentID
+            let imageHash = self.cameraPhotoResult?.image?.blurHash(numberOfComponents: (3, 2))
+            
+            
+            
+            self.actualPostButton?.setTitle("Finishing up...", for: .normal)
+            print("* calculated image hash: \(imageHash)")
+            ref.setData([
+                "caption"      : (self.captionView?.text ?? "").replacingOccurrences(of: "Enter a caption", with: ""),
+                "tags"    : [],
+                "authorID"     : userID,
+                "createdAt": Int(timestamp),
+                "location"       : self.AddLocationTextField?.text ?? "",
+                "imageHash": (imageHash ?? "") as! String,
+                "postImageUrl" : url,
+                "likes_count": 0,
+                "comments_count": 0,
+                "storage_ref": "post_photos/\(userID)/\(locationUID)",
+                "likes": [],
+                "ext_likes": [],
+                "fromCameraRoll": self.uploadedFromCameraRoll
+            ]) { err in
+                print("* uploading post with image url: \(url)")
+                Analytics.logEvent("uploaded_post", parameters: [
+                  "postAuthor": userID,
+                ])
+                self.actualPostButton?.setTitle("Done!", for: .normal)
+                
+                let userID = Auth.auth().currentUser?.uid
+                let followersRef = self.db.collection("followers")
+                
+                if let navController = self.navigationController, navController.viewControllers.count >= 2 {
+                    let viewController = navController.viewControllers[navController.viewControllers.count - 2]
+                    print("* got parent viewcontroller: \(viewController)")
+                    viewController.tabBarController?.selectedIndex = 0
+                    let feed = viewController as? FeedViewController
+                    feed?.imagePosts?.removeAll()
+                    feed?.documents.removeAll()
+                    feed?.query = followersRef.whereField("followers", arrayContains: userID!).order(by: "last_post", descending: true).limit(to: 3)
+                    
+                    feed?.postsTableView.reloadData()
+                    feed?.getPosts()
+                }
+                self.dismiss(animated: true)
+            }
+            
+            
+            
+            
+        }
+    }
+    @objc internal func handlePostButtonAndScanAI(_ button: UIButton)
     {
         print("* posting photo")
-            let userID : String = (Auth.auth().currentUser?.uid)!
-            uploadPostMedia() { url in
-                  guard let url = url else { return }
-                let timestamp = NSDate().timeIntervalSince1970
-                let ref = self.db.collection("posts").document(userID).collection("posts").document()
-                let documentId = ref.documentID
-                let imageHash = self.cameraPhotoResult?.image?.blurHash(numberOfComponents: (7, 4))
-                print("* calculated image hash: \(imageHash)")
-                ref.setData([
-                    "caption"      : (self.captionView?.text ?? "").replacingOccurrences(of: "Enter a caption", with: ""),
-                    "tags"    : [],
-                    "authorID"     : userID,
-                    "createdAt": Int(timestamp),
-                    "location"       : self.AddLocationTextField?.text ?? "",
-                    "imageHash": (imageHash ?? "") as! String,
-                    "postImageUrl" : url,
-                    "likes_count": 0
-                ])
-                self.db.collection("followers").document(userID).updateData(["last_post":["id":documentId,"createdAt":timestamp]])
-                print("* uploading post with image url: \(url)")
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        actualPostButton?.isUserInteractionEnabled = false
+        actualPostButton?.setAnimation(LoadyAnimationType.backgroundHighlighter())
+        actualPostButton?.backgroundColor = hexStringToUIColor(hex: Constants.secondaryColor)
+        actualPostButton?.backgroundFillColor = hexStringToUIColor(hex: Constants.primaryColor)
+        // starts loading animation
+        actualPostButton?.startLoading()
+        self.actualPostButton?.setTitle("Uploading", for: .normal)
+        let userID : String = (Auth.auth().currentUser?.uid)!
+        uploadPostMedia() { url, locationUID in
+            guard let url = url else { return }
+            guard let locationUID = locationUID else {
+                return
+            }
+//            actualPostButton?.update(percent: snapshot.progress)
+            self.actualPostButton?.stopLoading()
+            self.actualPostButton?.setTitle("One moment...", for: .normal)
+            self.actualPostButton?.backgroundColor = self.hexStringToUIColor(hex: Constants.secondaryColor)
+            self.actualPostButton?.titleLabel?.textColor = self.hexStringToUIColor(hex: Constants.primaryColor)
+            self.actualPostButton?.tintColor = self.hexStringToUIColor(hex: Constants.primaryColor)
+            self.db.collection("image-ai-results").document(locationUID).addSnapshotListener { documentSnapshot, error in
+                if let error = error {
+                    print("* error occured in getting ai results")
+                } else {
+                    
+                    if (documentSnapshot?.exists)! {
+                        print("* detected vision data has been updated, parsing")
+                        let data = documentSnapshot?.data()
+                        print("* got data from vision: \(data)")
+                        let isAdult = data?["adult"] as? String ?? ""
+                        let isMedical = data?["medical"] as? String ?? ""
+                        let isRacy = data?["racy"] as? String ?? ""
+                        let isViolent = data?["violence"] as? String ?? ""
+                        let sfwResult = self.checkForSFW(isAdult: isAdult, isMedical: isMedical, isRacy: isRacy, isViolent: isViolent)
+                        print("* result from SFW search [true/false] for SAFE: \(sfwResult)")
+                        if sfwResult == true {
+                            let timestamp = NSDate().timeIntervalSince1970
+                            let ref = self.db.collection("posts").document(userID).collection("posts").document()
+                            let documentId = ref.documentID
+                            let imageHash = self.cameraPhotoResult?.image?.blurHash(numberOfComponents: (3, 2))
+                            
+                            
+                            
+                            self.actualPostButton?.setTitle("Finishing up...", for: .normal)
+                            print("* calculated image hash: \(imageHash)")
+                            ref.setData([
+                                "caption"      : (self.captionView?.text ?? "").replacingOccurrences(of: "Enter a caption", with: ""),
+                                "tags"    : [],
+                                "authorID"     : userID,
+                                "createdAt": Int(timestamp),
+                                "location"       : self.AddLocationTextField?.text ?? "",
+                                "imageHash": (imageHash ?? "") as! String,
+                                "postImageUrl" : url,
+                                "likes_count": 0,
+                                "fromCameraRoll": self.uploadedFromCameraRoll
+                            ]) { err in
+                                self.db.collection("followers").document(userID).updateData(["last_post":["id":documentId,"createdAt":timestamp]])
+                                print("* uploading post with image url: \(url)")
+                                self.actualPostButton?.setTitle("Done!", for: .normal)
+                                
+                                let userID = Auth.auth().currentUser?.uid
+                                let followersRef = self.db.collection("followers")
+                                
+                                self.db.collection("image-ai-results").document(locationUID).delete()
+                                if let navController = self.navigationController, navController.viewControllers.count >= 2 {
+                                     let viewController = navController.viewControllers[navController.viewControllers.count - 2]
+                                    print("* got parent viewcontroller: \(viewController)")
+                                    viewController.tabBarController?.selectedIndex = 0
+                                    let feed = viewController as? FeedViewController
+                                    feed?.imagePosts?.removeAll()
+                                    feed?.documents.removeAll()
+                                    feed?.query = followersRef.whereField("followers", arrayContains: userID!).order(by: "last_post", descending: true).limit(to: 3)
+                                    
+                                    feed?.postsTableView.reloadData()
+                                    feed?.getPosts()
+                                }
+                                self.dismiss(animated: true)
+                            }
+                            
+                        } else {
+                            print("* USER UPLOADED NSFW IMAGE")
+                        }
+                    } else {
+                        print("* waiting for VISION api data..")
+                    }
+                    
+                }
+            }
+            
+        }
     }
-    }
-        @objc internal func handleNextButton(_ button: UIButton) {
+    @objc internal func handleNextButton(_ button: UIButton) {
         if stepNameLabel!.text == "Choose Filter" {
             UIView.animate(withDuration: 0.3, animations: { [self] in
                 self.view.layoutIfNeeded()
@@ -1470,7 +1815,7 @@ extension CameraViewController {
             
         }
     }
-
+    
 }
 
 // MARK: - UIGestureRecognizerDelegate
@@ -1706,7 +2051,7 @@ extension CameraViewController: NextLevelFlashAndTorchDelegate {
 }
 
 // MARK: - NextLevelVideoDelegate
-extension CameraViewController: NextLevelVideoDelegate {
+extension CameraViewController: NextLevelVideoDelegate, PhotoEditorDelegate {
 
     // video zoom
     func nextLevel(_ nextLevel: NextLevel, didUpdateVideoZoomFactor videoZoomFactor: Float) {
@@ -1778,14 +2123,140 @@ extension CameraViewController: NextLevelVideoDelegate {
             cameraPhotoResult?.frame = previewView!.frame
             cameraPhotoResult?.layer.cornerRadius = (self.previewView?.layer.cornerRadius)!
             cameraPhotoResult?.clipsToBounds = true
+            uploadedFromCameraRoll = false
             hideAllPhotoComponents()
             if postType == "post" {
-                showPhotoPostComponents()
+//                showPhotoPostComponents()
+                // create controller for brightroom
+                // Create an image provider
+                let imageProvider = ImageProvider(image: OriginalPostImageForFiltering!) // URL, Data are also supported.
+                
+                let stack = EditingStack.init(
+                  imageProvider: imageProvider
+                )
+                
+                self._present(stack, square: false)
+                
+            } else if postType == "story" {
+                let photoEditor = PhotoEditorViewController(nibName:"PhotoEditorViewController",bundle: Bundle(for: PhotoEditorViewController.self))
+
+                //PhotoEditorDelegate
+                photoEditor.photoEditorDelegate = self
+
+                //The image to be edited
+                photoEditor.image = OriginalPostImageForFiltering
+
+                //Optional: To hide controls - array of enum control
+                photoEditor.hiddenControls = [.crop, .share, .sticker]
+
+                //Optional: Colors for drawing and Text, If not set default values will be used
+//                photoEditor.colors = [.red,.blue,.green]
+                
+                //Present the View Controller
+                present(photoEditor, animated: false, completion: nil)
             }
             
         }
     }
+    func doneEditing(image: UIImage) {
+        // the edited image
+        print("* posting story")
+        let userID : String = (Auth.auth().currentUser?.uid)!
+        let randomString = randomString(length: 20)
+        let storageRef = Storage.storage().reference().child("stories/\(userID)/\(randomString)")
+        
+        guard let imageData = image.nx_croppedImage(to: 1.7).jpegData(compressionQuality: 0.75) else { return }
+        print("* cropped image")
+        let metaData = StorageMetadata()
+        metaData.contentType = "image/jpg"
+        let uploadTask = storageRef.putData(imageData, metadata: metaData) { metaData, error in
+            if error == nil, metaData != nil {
+                
+                storageRef.downloadURL { url, error in
+                    // success!
+                    print("* success uploading image!")
+                    let ref = self.db.collection("stories").document(userID).collection("stories").document()
+                    let documentId = ref.documentID
+                    print("* developed document id: \(documentId)")
+//                    let imageHash = image.blurHash(numberOfComponents: (1, 2))
+                    let imageHash = ""
+                
+                    print("* calculated image hash: \(imageHash)")
+                    let timestamp = NSDate().timeIntervalSince1970
+                    ref.setData([
+                        "tags"    : [],
+                        "authorID"     : userID,
+                        "createdAt": Int(timestamp),
+                        "imageHash": (imageHash ?? "") as! String,
+                        "storyImageUrl" : url?.absoluteString as! String,
+                        "fromCameraRoll": self.uploadedFromCameraRoll
+                    ])
+                    Analytics.logEvent("uploaded_story", parameters: [
+                      "postAuthor": userID,
+                    ])
+                    self.dismiss(animated: true)
+                }
+            } else {
+                // failed
+                print("* error uploading photos")
+            }
+        }
+    }
+        
+    func canceledEditing() {
+        print("Canceled")
+        showAllPhotoComponents()
+    }
+    private func _present(_ editingStack: EditingStack, square: Bool, faceDetection: Bool = false) {
+      var options = ClassicImageEditOptions()
 
+      options.isFaceDetectionEnabled = faceDetection
+      if square {
+        options.croppingAspectRatio = .square
+      } else {
+          options.croppingAspectRatio = .init(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.25)
+      }
+     
+      let controller = ClassicImageEditViewController(editingStack: editingStack, options: options)
+        
+      controller.handlers.didEndEditing = { [weak self] controller, stack in
+        guard let self = self else { return }
+        controller.dismiss(animated: false, completion: nil)
+
+//        self.resultCell.image = nil
+
+        try! stack.makeRenderer().render { result in
+          switch result {
+          case let .success(rendered):
+//            self.resultCell.image = rendered.uiImage
+              print("* got returned image")
+              self.cameraPhotoResult?.image = rendered.uiImage
+              self.view.addSubview(self.cameraPhotoResult!)
+              self.view?.sendSubviewToBack(self.cameraPhotoResult!)
+              self.view.addSubview(self.goBackButton!)
+//              self.view.addSubview(self.actualPostButton!)
+              self.view.addSubview(self.stepNameLabel!)
+              
+              self.showPostDetailOptions()
+          case let .failure(error):
+              print("* error dismissed?")
+            print(error)
+          }
+        }
+      }
+
+      controller.handlers.didCancelEditing = { controller in
+        controller.dismiss(animated: false, completion: nil)
+          print("* user dismissed?")
+//          self.showPostDetailOptions()
+          self.showAllPhotoComponents()
+      }
+
+      let navigationController = UINavigationController(rootViewController: controller)
+      navigationController.modalPresentationStyle = .fullScreen
+
+      present(navigationController, animated: false, completion: nil)
+    }
 }
 
 // MARK: - NextLevelPhotoDelegate

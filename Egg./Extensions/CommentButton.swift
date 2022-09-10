@@ -9,9 +9,12 @@ import UIKit
 class CommentButton: UIButton {
 var isLiked = false
   
-    let unlikedImage = UIImage(systemName: "message")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .systemIndigo)
-    let likedImage = UIImage(systemName: "message.fill")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .systemIndigo)
+//    let unlikedImage = UIImage(systemName: "message")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .systemIndigo)
+//    let likedImage = UIImage(systemName: "message.fill")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .systemIndigo)
   
+    let unlikedImage = UIImage(systemName: "message")?.applyingSymbolConfiguration(.init(pointSize: 18, weight: .regular, scale: .medium))?.image(withTintColor: Constants.textColor.hexToUiColor())
+    let likedImage = UIImage(systemName: "message.fill")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .regular, scale: .medium))?.image(withTintColor: Constants.textColor.hexToUiColor())
+    
   private let unlikedScale: CGFloat = 0.7
   private let likedScale: CGFloat = 1.3
     

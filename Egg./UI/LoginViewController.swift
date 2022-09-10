@@ -13,11 +13,22 @@ import FirebaseFirestore
 import FirebaseAnalytics
 import Presentr
 import GoogleSignIn
-import IHProgressHUD
+import CryptoKit
+import AuthenticationServices
+//import IHProgressHUD
 //import SnapS
 //import SCSDKLoginKit
-
-class LoginViewController: UIViewController, GIDSignInDelegate {
+extension UIDevice {
+    var hasNotch: Bool {
+        let bottom = UIApplication.shared.keyWindow?.safeAreaInsets.bottom ?? 0
+        return bottom > 0
+    }
+}
+class LoginViewController: UIViewController, ASAuthorizationControllerPresentationContextProviding {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return self.view.window!
+    }
+    
     @IBOutlet weak var LoginView: UIView!
     @IBOutlet weak var LoginButton: UIButton!
     @IBOutlet weak var DontHaveAnAccountButton: UIButton!
@@ -42,7 +53,14 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
     @IBOutlet weak var lastNameTextField: UITextField!
     @IBOutlet weak var usernameTextField: UITextField!
     @IBOutlet weak var SignuppasswordTextField: UITextField!
+    
     @IBOutlet weak var signUpLabel: UILabel!
+    
+    @IBOutlet weak var brodiesDudeLogo: UIImageView!
+    @IBOutlet weak var brodiesLogo: UIImageView!
+    
+    // Unhashed nonce.
+    fileprivate var currentNonce: String?
     
     var alert: UIAlertController?
     let presenter = Presentr(presentationType: .alert)
@@ -50,9 +68,17 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
     
     private var db = Firestore.firestore()
     
+    var hasTopNotch: Bool = false
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.view.backgroundColor = hexStringToUIColor(hex: "#f5f5f5")
+//        self.view.backgroundColor = hexStringToUIColor(hex: "#f5f5f5")
+        self.view.backgroundColor = Constants.surfaceColor.hexToUiColor()
+        backbutton.setTitle("", for: .normal)
+        if UIDevice.current.hasNotch {
+            //... consider notch
+            hasTopNotch = true
+        }
 //        SCSDKLoginClient.startFirebaseAuth(from: self, completion: <#T##SCFirebaseAuthCompletionBlock##SCFirebaseAuthCompletionBlock##(String?, Error?) -> Void#>)
         StyleLoginComponents()
     }
@@ -63,8 +89,6 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
             print("loaded login screen")
             
             self.hideKeyboardWhenTappedAround()
-            GIDSignIn.sharedInstance()?.presentingViewController = self
-            GIDSignIn.sharedInstance().delegate = self
             let tapGR = UITapGestureRecognizer(target: self, action: #selector(self.googleImageTapped))
             googleSignInImage.addGestureRecognizer(tapGR)
             googleSignInImage.isUserInteractionEnabled = true
@@ -76,6 +100,25 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
         }
     }
     func StyleLoginComponents() {
+        let widHeight = 110
+        brodiesDudeLogo.frame = CGRect(x: (Int(UIScreen.main.bounds.width) / 2)-widHeight/2, y: 70, width: widHeight, height: widHeight)
+        let brodWidth = 80
+        let brodHeight = 40
+        brodiesLogo.frame = CGRect(x: 0, y: Int(brodiesDudeLogo.frame.maxY), width: brodWidth, height: brodHeight)
+        signInLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+        signInLabel.frame = CGRect(x: 20, y: brodiesLogo.frame.maxY + 30, width: UIScreen.main.bounds.width - 40, height: 30)
+        backbutton.frame = CGRect(x: 20, y: 60, width: 30, height: 30)
+        DontHaveAnAccountButton.frame = CGRect(x: 40, y: UIScreen.main.bounds.height - 80, width: UIScreen.main.bounds.width - 80, height: 30)
+        if hasTopNotch == false {
+            print("* no notch, addapting")
+            brodiesDudeLogo.frame = CGRect(x: (Int(UIScreen.main.bounds.width) / 2)-60/2, y: 30, width: 60, height: 60)
+            brodiesLogo.frame = CGRect(x: 0, y: Int(brodiesDudeLogo.frame.maxY), width: 60, height: 30)
+            signInLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
+            signInLabel.frame = CGRect(x: 20, y: brodiesLogo.frame.maxY + 10, width: UIScreen.main.bounds.width - 40, height: 30)
+            backbutton.frame = CGRect(x: 20, y: 20, width: 30, height: 30)
+            DontHaveAnAccountButton.frame = CGRect(x: 40, y: UIScreen.main.bounds.height - 40, width: UIScreen.main.bounds.width - 80, height: 30)
+        }
+        brodiesLogo.center.x = UIScreen.main.bounds.width / 2
         LoginButton.backgroundColor = hexStringToUIColor (hex:Constants.primaryColor)
         LoginButton.layer.cornerRadius = 4
         LoginButton.layer.shadowColor = hexStringToUIColor (hex:Constants.primaryColor).withAlphaComponent(0.3).cgColor
@@ -92,12 +135,12 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
         SignupButton.layer.shadowOpacity = 0.5
         SignupButton.layer.shadowRadius = 4
         SignupButton.titleLabel!.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
-        backbutton.frame = CGRect(x: 40, y: 60, width: 30, height: 30)
-        backbutton.layer.cornerRadius = 4
-        backbutton.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
-        backbutton.layer.shadowOffset = CGSize(width: 4, height: 10)
-        backbutton.layer.shadowOpacity = 0.5
-        backbutton.layer.shadowRadius = 4
+        
+//        backbutton.layer.cornerRadius = 4
+//        backbutton.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
+//        backbutton.layer.shadowOffset = CGSize(width: 4, height: 10)
+//        backbutton.layer.shadowOpacity = 0.5
+//        backbutton.layer.shadowRadius = 4
         
         let paddingView: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 20))
 //        emailTextField.leftView = paddingView
@@ -105,47 +148,62 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
 //        passwordTextField.leftView = paddingView
 //        passwordTextField.leftViewMode = .always
         
-        DontHaveAnAccountButton.frame = CGRect(x: 40, y: UIScreen.main.bounds.height - 80, width: UIScreen.main.bounds.width - 80, height: 30)
+        
         DontHaveAnAccountButton.backgroundColor = .clear
         DontHaveAnAccountButton.titleLabel?.textColor = hexStringToUIColor(hex: Constants.primaryColor)
-        DontHaveAnAccountButton.titleLabel?.font = UIFont(name: Constants.globalFont, size: 14)
+        DontHaveAnAccountButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 12)
         DontHaveAnAccountButton.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
         
-        signInLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 18)
-        signInLabel.frame = CGRect(x: 40, y: 200, width: UIScreen.main.bounds.width - 80, height: 30)
         
-        signUpLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 18)
-        signUpLabel.frame = CGRect(x: 40, y: 120, width: UIScreen.main.bounds.width - 80, height: 30)
         
-        emailTextField.frame = CGRect(x: 40, y: signInLabel.frame.maxY + 20, width: UIScreen.main.bounds.width - 80, height: 53)
-        emailTextField.styleComponents()
-//        emailTextField
-        passwordTextField.frame = CGRect(x: 40, y: emailTextField.frame.maxY + 20, width: UIScreen.main.bounds.width - 80, height: 53)
-        passwordTextField.styleComponents()
+        signUpLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+        signUpLabel.frame = CGRect(x: backbutton.frame.maxX + 10, y: backbutton.frame.minY, width: UIScreen.main.bounds.width - 40, height: 30)
+        
+        emailTextField.frame = CGRect(x: 20, y: signInLabel.frame.maxY + 20, width: UIScreen.main.bounds.width - 40, height: 53)
+        emailTextField.styleSearchBar()
+        emailTextField.backgroundColor = Constants.backgroundColor.hexToUiColor()
+//        emailTextField.frame = CGRect(x: 40, y: signInLabel.frame.maxY + 20, width: UIScreen.main.bounds.width - 80, height: 53)
+        let paddingViewz: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 15, height: 50))
+        emailTextField.leftView = paddingViewz
+        emailTextField.leftViewMode = .always
+        
+        passwordTextField.frame = CGRect(x: 20, y: emailTextField.frame.maxY + 20, width: UIScreen.main.bounds.width - 40, height: 53)
+        passwordTextField.styleSearchBar()
+        passwordTextField.backgroundColor = Constants.backgroundColor.hexToUiColor()
+        let paddingView2: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 15, height: 50))
+        passwordTextField.leftView = paddingView2
+        passwordTextField.leftViewMode = .always
+        
         LoginButton.frame = CGRect(x: 40, y: passwordTextField.frame.maxY + 30, width: UIScreen.main.bounds.width - 80, height: 53)
         
         otherSigninOptionsLabel.frame = CGRect(x: 40, y: LoginButton.frame.maxY + 100, width: UIScreen.main.bounds.width - 80, height: 20)
+        if hasTopNotch == false {
+            otherSigninOptionsLabel.frame = CGRect(x: 40, y: LoginButton.frame.maxY + 20, width: UIScreen.main.bounds.width - 80, height: 20)
+        }
         otherSigninOptionsLabel.textAlignment = .center
         otherSigninOptionsLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
         
         let spaceBetweenOtherSignins = 10
-        let widthForOtherSignins = (Int(UIScreen.main.bounds.width) - 80 - (spaceBetweenOtherSignins*2)) / 3
+        let widthForOtherSignins = (Int(UIScreen.main.bounds.width) - 80 - (spaceBetweenOtherSignins*2)) / 2
         let signinOptionsY = otherSigninOptionsLabel.frame.maxY + 20
-        
-        googleSignInButton.frame = CGRect(x: 40, y: Int(signinOptionsY), width: widthForOtherSignins, height: 53)
-        appleSignInButton.frame = CGRect(x: Int(googleSignInButton.frame.maxX) + spaceBetweenOtherSignins, y: Int(signinOptionsY), width: widthForOtherSignins, height: 53)
-        twitterSignInButton.frame = CGRect(x: Int(appleSignInButton.frame.maxX) + spaceBetweenOtherSignins, y: Int(signinOptionsY), width: widthForOtherSignins, height: 53)
+        var signinbuttonsHeight = 53
+        if hasTopNotch == false {
+            signinbuttonsHeight = 40
+        }
+        googleSignInButton.frame = CGRect(x: 40, y: Int(signinOptionsY), width: widthForOtherSignins, height: signinbuttonsHeight)
+        appleSignInButton.frame = CGRect(x: Int(googleSignInButton.frame.maxX) + spaceBetweenOtherSignins, y: Int(signinOptionsY), width: widthForOtherSignins, height: signinbuttonsHeight)
+        twitterSignInButton.frame = CGRect(x: Int(appleSignInButton.frame.maxX) + spaceBetweenOtherSignins, y: Int(signinOptionsY), width: widthForOtherSignins, height: signinbuttonsHeight)
         googleSignInButton.layer.cornerRadius = 4
         appleSignInButton.layer.cornerRadius = 4
         twitterSignInButton.layer.cornerRadius = 4
         
         let imageSize = 25 //in pixels
         let xForImage = (widthForOtherSignins - (imageSize*2)) / 2
-        googleSignInImage.frame = CGRect(x: Int(googleSignInButton.frame.maxX)+xForImage, y: Int(googleSignInButton.frame.minY) + ((53 - imageSize) / 2), width: imageSize, height: imageSize)
+        googleSignInImage.frame = CGRect(x: Int(googleSignInButton.frame.maxX)+xForImage, y: Int(googleSignInButton.frame.minY) + ((signinbuttonsHeight - imageSize) / 2), width: imageSize, height: imageSize)
         googleSignInImage.frame.centerX = googleSignInButton.frame.centerX
-        twitterSignInImage.frame = CGRect(x: Int(twitterSignInButton.frame.maxX)+xForImage, y: Int(twitterSignInButton.frame.minY) + ((53 - imageSize) / 2), width: imageSize, height: imageSize)
+        twitterSignInImage.frame = CGRect(x: Int(twitterSignInButton.frame.maxX)+xForImage, y: Int(twitterSignInButton.frame.minY) + ((signinbuttonsHeight - imageSize) / 2), width: imageSize, height: imageSize)
         twitterSignInImage.frame.centerX = twitterSignInButton.frame.centerX
-        appleSignInImage.frame = CGRect(x: Int(appleSignInButton.frame.maxX)+xForImage, y: Int(appleSignInButton.frame.minY) + ((53 - imageSize) / 2), width: imageSize, height: imageSize)
+        appleSignInImage.frame = CGRect(x: Int(appleSignInButton.frame.maxX)+xForImage, y: Int(appleSignInButton.frame.minY) + ((signinbuttonsHeight - imageSize) / 2), width: imageSize, height: imageSize)
         appleSignInImage.frame.centerX = appleSignInButton.frame.centerX
         
         googleSignInButton.layer.cornerRadius = 4
@@ -153,21 +211,91 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
         googleSignInButton.layer.shadowOffset = CGSize(width: 0, height: 4)
         googleSignInButton.layer.shadowOpacity = 0.5
         googleSignInButton.layer.shadowRadius = 4
+        googleSignInButton.backgroundColor = Constants.backgroundColor.hexToUiColor()
         
-        twitterSignInButton.layer.cornerRadius = 4
-        twitterSignInButton.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
-        twitterSignInButton.layer.shadowOffset = CGSize(width: 0, height: 4)
-        twitterSignInButton.layer.shadowOpacity = 0.5
-        twitterSignInButton.layer.shadowRadius = 4
-        
+//        twitterSignInButton.layer.cornerRadius = 4
+//        twitterSignInButton.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
+//        twitterSignInButton.layer.shadowOffset = CGSize(width: 0, height: 4)
+//        twitterSignInButton.layer.shadowOpacity = 0.5
+//        twitterSignInButton.layer.shadowRadius = 4
+//        SignupButton.setTitle("Continue", for: .normal)
         appleSignInButton.layer.cornerRadius = 4
         appleSignInButton.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
         appleSignInButton.layer.shadowOffset = CGSize(width: 0, height: 4)
         appleSignInButton.layer.shadowOpacity = 0.5
         appleSignInButton.layer.shadowRadius = 4
+        appleSignInButton.backgroundColor = Constants.backgroundColor.hexToUiColor()
         
         LoginView.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
         SignUpView.frame = LoginView.frame
+    }
+    func dismissAndReload() {
+        self.dismiss(animated: true)
+        UIApplication.shared.keyWindow?.rootViewController = storyboard!.instantiateViewController(withIdentifier: "Root_View")
+    }
+    // Adapted from https://auth0.com/docs/api-auth/tutorials/nonce#generate-a-cryptographically-random-nonce
+    private func randomNonceString(length: Int = 32) -> String {
+      precondition(length > 0)
+      let charset: [Character] =
+        Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+      var result = ""
+      var remainingLength = length
+
+      while remainingLength > 0 {
+        let randoms: [UInt8] = (0 ..< 16).map { _ in
+          var random: UInt8 = 0
+          let errorCode = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+          if errorCode != errSecSuccess {
+            fatalError(
+              "Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)"
+            )
+          }
+          return random
+        }
+
+        randoms.forEach { random in
+          if remainingLength == 0 {
+            return
+          }
+
+          if random < charset.count {
+            result.append(charset[Int(random)])
+            remainingLength -= 1
+          }
+        }
+      }
+
+      return result
+    }
+    @available(iOS 13, *)
+    private func sha256(_ input: String) -> String {
+      let inputData = Data(input.utf8)
+      let hashedData = SHA256.hash(data: inputData)
+      let hashString = hashedData.compactMap {
+        String(format: "%02x", $0)
+      }.joined()
+
+      return hashString
+    }
+
+        
+    @available(iOS 13, *)
+    func startSignInWithAppleFlow() {
+      let nonce = randomNonceString()
+      currentNonce = nonce
+      let appleIDProvider = ASAuthorizationAppleIDProvider()
+      let request = appleIDProvider.createRequest()
+      request.requestedScopes = [.fullName, .email]
+        
+      request.nonce = sha256(nonce)
+
+      let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+      authorizationController.delegate = self
+      authorizationController.presentationContextProvider = self
+      authorizationController.performRequests()
+    }
+    @IBAction func signInWithApplePayPressed(_ sender: Any) {
+        startSignInWithAppleFlow()
     }
     @IBAction func dontHaveAccountPressed(_ sender: Any) {
         LoginView.fadeOut()
@@ -180,6 +308,8 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
         appleSignInButton.fadeOut()
         twitterSignInButton.fadeOut()
         otherSigninOptionsLabel.fadeOut()
+        brodiesLogo.fadeOut()
+        brodiesDudeLogo.fadeOut()
         DispatchQueue.global(qos: .background).async {
             let second: Double = 1000000
             usleep(useconds_t(0.3 * second))
@@ -190,15 +320,27 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
                 self.SignupButton.fadeIn()
                 self.emailTextField.fadeIn()
                 self.passwordTextField.fadeIn()
-                self.firstNameTextField.frame = CGRect(x: 40, y: self.signUpLabel.frame.maxY + 30, width: ((UIScreen.main.bounds.width - 80) / 2) - 5, height: 53)
-                self.firstNameTextField.styleComponents()
-                self.lastNameTextField.frame = CGRect(x: self.firstNameTextField.frame.maxX + 10, y: self.signUpLabel.frame.maxY + 30, width: ((UIScreen.main.bounds.width - 80) / 2) - 5, height: 53)
-                self.lastNameTextField.styleComponents()
-                self.usernameTextField.frame = CGRect(x: 40, y: self.lastNameTextField.frame.maxY + 10, width: UIScreen.main.bounds.width - 80, height: 53)
-                self.usernameTextField.styleComponents()
-                self.emailTextField.frame = CGRect(x: 40, y: self.usernameTextField.frame.maxY + 10, width: UIScreen.main.bounds.width - 80, height: 53)
-                self.passwordTextField.frame = CGRect(x: 40, y: self.emailTextField.frame.maxY + 10, width: UIScreen.main.bounds.width - 80, height: 53)
-                self.LoginButton.frame = CGRect(x: 40, y: self.passwordTextField.frame.maxY + 30, width: UIScreen.main.bounds.width - 80, height: 53)
+                self.firstNameTextField.frame = CGRect(x: 20, y: self.signUpLabel.frame.maxY + 20, width: ((UIScreen.main.bounds.width - 40) / 2) - 5, height: 53)
+                self.firstNameTextField.styleSearchBar()
+                self.firstNameTextField.backgroundColor = Constants.backgroundColor.hexToUiColor()
+                let paddingView2: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 15, height: 50))
+                self.firstNameTextField.leftView = paddingView2
+                self.firstNameTextField.leftViewMode = .always
+                self.lastNameTextField.frame = CGRect(x: self.firstNameTextField.frame.maxX + 10, y: self.firstNameTextField.frame.minY, width: ((UIScreen.main.bounds.width - 40) / 2) - 5, height: 53)
+                self.lastNameTextField.styleSearchBar()
+                self.lastNameTextField.backgroundColor = Constants.backgroundColor.hexToUiColor()
+                let paddingView3: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 15, height: 50))
+                self.lastNameTextField.leftView = paddingView3
+                self.lastNameTextField.leftViewMode = .always
+                self.usernameTextField.frame = CGRect(x: 20, y: self.lastNameTextField.frame.maxY + 10, width: UIScreen.main.bounds.width - 40, height: 53)
+                self.usernameTextField.styleSearchBar()
+                self.usernameTextField.backgroundColor = Constants.backgroundColor.hexToUiColor()
+                let paddingView5: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 15, height: 50))
+                self.usernameTextField.leftView = paddingView5
+                self.usernameTextField.leftViewMode = .always
+                self.emailTextField.frame = CGRect(x: 20, y: self.usernameTextField.frame.maxY + 10, width: UIScreen.main.bounds.width - 40, height: 53)
+                self.passwordTextField.frame = CGRect(x: 20, y: self.emailTextField.frame.maxY + 10, width: UIScreen.main.bounds.width - 40, height: 53)
+                self.LoginButton.frame = CGRect(x: 20, y: self.passwordTextField.frame.maxY + 30, width: UIScreen.main.bounds.width - 40, height: 53)
 //                self.SignuppasswordTextField.frame = CGRect(x: 40, y: self.passwordTextField.frame.maxY + 10, width: UIScreen.main.bounds.width - 80, height: 53)
                 self.SignupButton.frame = CGRect(x: 40, y: self.passwordTextField.frame.maxY + 30, width: UIScreen.main.bounds.width - 80, height: 53)
                 self.otherSigninOptionsLabel.frame = CGRect(x: 40, y: UIScreen.main.bounds.height - 150, width: UIScreen.main.bounds.width - 80, height: 20)
@@ -206,7 +348,7 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
                 
                 
                 let spaceBetweenOtherSignins = 10
-                let widthForOtherSignins = (Int(UIScreen.main.bounds.width) - 80 - (spaceBetweenOtherSignins*2)) / 3
+                let widthForOtherSignins = (Int(UIScreen.main.bounds.width) - 80 - (spaceBetweenOtherSignins*2)) / 2
                 let signinOptionsY = self.otherSigninOptionsLabel.frame.maxY + 10
                 
                 self.googleSignInButton.frame = CGRect(x: 40, y: Int(signinOptionsY), width: widthForOtherSignins, height: 53)
@@ -230,7 +372,7 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
                 self.twitterSignInImage.fadeIn()
                 self.googleSignInButton.fadeIn()
                 self.appleSignInButton.fadeIn()
-                self.twitterSignInButton.fadeIn()
+//                self.twitterSignInButton.fadeIn()
                 self.otherSigninOptionsLabel.fadeIn()
                 self.SignUpView.fadeIn()
             }
@@ -323,93 +465,178 @@ class LoginViewController: UIViewController, GIDSignInDelegate {
                 self.appleSignInButton.fadeIn()
                 self.twitterSignInButton.fadeIn()
                 self.otherSigninOptionsLabel.fadeIn()
-                
+                self.brodiesLogo.fadeIn()
+                self.brodiesDudeLogo.fadeIn()
             }
             
         }
     }
     @IBAction func googleSignInPressed(_ sender: Any) {
         
-        GIDSignIn.sharedInstance()?.signIn()
-    }
-    @objc func googleImageTapped(sender: UITapGestureRecognizer) {
-                    if sender.state == .ended {
-                            print("UIImageView tapped")
-                        GIDSignIn.sharedInstance()?.signIn()
-                    }
-            }
-    func sign(_ signIn: GIDSignIn!, didSignInFor user: GIDGoogleUser!, withError error: Error!) {
-        print("Google Sing In didSignInForUser")
-//        let alert = UIAlertController(title: nil, message: "Please wait...", preferredStyle: .alert)
-//
-//        let loadingIndicator = UIActivityIndicatorView(frame: CGRect(x: 10, y: 5, width: 50, height: 50))
-//        loadingIndicator.hidesWhenStopped = true
-//        loadingIndicator.style = UIActivityIndicatorView.Style.gray
-//        loadingIndicator.startAnimating();
-//
-//        alert.view.addSubview(loadingIndicator)
-//        present(alert, animated: true, completion: nil)
-        
-        if let error = error {
-            showErrorMessage(title: "Error with Login", body: "There was an error while logging into google. Please Try Again.")
-          print(error.localizedDescription)
-          return
-        }
-        guard let authentication = user.authentication else { return }
-        let credential = GoogleAuthProvider.credential(withIDToken: (authentication.idToken)!, accessToken: (authentication.accessToken)!)
-    // When user is signed in
-        LoadingOverlay.shared.showOverlay(view: self.view)
-        Auth.auth().signIn(with: credential, completion: { (user, error) in
-          if let error = error {
-            print("Sigin error: \(error.localizedDescription)")
-              DispatchQueue.main.async {
-                  LoadingOverlay.shared.hideOverlayView()
-              }
-              self.showErrorMessage(title: "Error with Login", body: "There was an error while logging into google. Please Try Again.")
+        guard let clientID = FirebaseApp.app()?.options.clientID else { return }
+
+        // Create Google Sign In configuration object.
+        let config = GIDConfiguration(clientID: clientID)
+        // Start the sign in flow!
+        GIDSignIn.sharedInstance.signIn(with: config, presenting: self) { [unowned self] user, error in
+
+
+          guard
+            let authentication = user?.authentication,
+            let idToken = authentication.idToken
+          else {
             return
           }
-            print("user is signed in!")
-            FirebaseAnalytics.Analytics.logEvent("google_signin", parameters: [AnalyticsParameterScreenName: "login_view"])
-            
-            self.db.collection("users").document((user?.user.uid)!).setData([
-                "full_name": "\(user?.user.displayName ?? "")",
-                "email": "\(user?.user.email ?? "")",
-                "profileImageURL": "\(user?.user.photoURL?.absoluteString ?? "")",
-                "username": "\((user?.user.email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())"
-            ], merge: true) { err in
-                if let err = err {
-                    print("Error writing document: \(err)")
-                    DispatchQueue.main.async {
-                        LoadingOverlay.shared.hideOverlayView()
-                        self.showErrorMessage(title: "Error with login", body: "We are having trouble communicating with our servers. Please try again.")
-                    }
-                } else {
-                    print("Document successfully written!")
-                    self.db.collection("user-locations").document((user?.user.uid)!).setData([
-                        "username": "\((user?.user.email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())",
-                        "profileImageURL": "\(user?.user.photoURL?.absoluteString ?? "")",
-                        "uid": "\((user?.user.uid)!)",
-                        "full_name": "\(user?.user.displayName ?? "")"
-                    ], merge: true) { err in
-                        if let err = err {
-                            print("Error writing document: \(err)")
-                            
-                        } else {
-                            print("* Successfully updated users location to firestore")
-                            DispatchQueue.main.async {
-                                LoadingOverlay.shared.hideOverlayView()
+
+          let credential = GoogleAuthProvider.credential(withIDToken: idToken,
+                                                         accessToken: authentication.accessToken)
+            if let error = error {
+                showErrorMessage(title: "Error with Login", body: "There was an error while logging into google. Please Try Again.")
+              print(error.localizedDescription)
+              return
+            }
+        // When user is signed in
+            LoadingOverlay.shared.showOverlay(view: self.view)
+            Auth.auth().signIn(with: credential, completion: { (user, error) in
+              if let error = error {
+                print("Sigin error: \(error.localizedDescription)")
+                  DispatchQueue.main.async {
+                      LoadingOverlay.shared.hideOverlayView()
+                  }
+                  self.showErrorMessage(title: "Error with Login", body: "There was an error while logging into google. Please Try Again.")
+                return
+              }
+                print("user is signed in!")
+                FirebaseAnalytics.Analytics.logEvent("google_signin", parameters: [AnalyticsParameterScreenName: "login_view"])
+                
+                self.db.collection("users").document((user?.user.uid)!).setData([
+                    "full_name": "\(user?.user.displayName ?? "")",
+                    "email": "\(user?.user.email ?? "")",
+                    "profileImageURL": "\(user?.user.photoURL?.absoluteString ?? "")",
+                    "username": "\((user?.user.email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())"
+                ], merge: true) { err in
+                    if let err = err {
+                        print("Error writing document: \(err)")
+                        DispatchQueue.main.async {
+                            LoadingOverlay.shared.hideOverlayView()
+                            self.showErrorMessage(title: "Error with login", body: "We are having trouble communicating with our servers. Please try again.")
+                        }
+                    } else {
+                        print("Document successfully written!")
+                        self.db.collection("user-locations").document((user?.user.uid)!).setData([
+                            "username": "\((user?.user.email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())",
+                            "profileImageURL": "\(user?.user.photoURL?.absoluteString ?? "")",
+                            "uid": "\((user?.user.uid)!)",
+                            "full_name": "\(user?.user.displayName ?? "")"
+                        ], merge: true) { err in
+                            if let err = err {
+                                print("Error writing document: \(err)")
+                                
+                            } else {
+                                print("* Successfully updated users location to firestore")
+                                DispatchQueue.main.async {
+                                    LoadingOverlay.shared.hideOverlayView()
+                                }
+                                self.presentingViewController?.dismiss(animated: true, completion: nil)
+                                
                             }
-                            self.presentingViewController?.dismiss(animated: true, completion: nil)
-                            
                         }
                     }
                 }
-            }
-            
+                
 
-//            self.dismiss(animated: true, completion: nil)
-        })
-      }
+    //            self.dismiss(animated: true, completion: nil)
+            })
+
+          // ...
+        }
+    }
+    @objc func googleImageTapped(sender: UITapGestureRecognizer) {
+        if sender.state == .ended {
+                print("UIImageView tapped")
+            guard let clientID = FirebaseApp.app()?.options.clientID else { return }
+
+            // Create Google Sign In configuration object.
+            let config = GIDConfiguration(clientID: clientID)
+            // Start the sign in flow!
+            GIDSignIn.sharedInstance.signIn(with: config, presenting: self) { [unowned self] user, error in
+
+              if let error = error {
+                // ...
+                return
+              }
+
+              guard
+                let authentication = user?.authentication,
+                let idToken = authentication.idToken
+              else {
+                return
+              }
+
+              let credential = GoogleAuthProvider.credential(withIDToken: idToken,
+                                                             accessToken: authentication.accessToken)
+                if let error = error {
+                    showErrorMessage(title: "Error with Login", body: "There was an error while logging into google. Please Try Again.")
+                  print(error.localizedDescription)
+                  return
+                }
+            // When user is signed in
+                LoadingOverlay.shared.showOverlay(view: self.view)
+                Auth.auth().signIn(with: credential, completion: { (user, error) in
+                  if let error = error {
+                    print("Sigin error: \(error.localizedDescription)")
+                      DispatchQueue.main.async {
+                          LoadingOverlay.shared.hideOverlayView()
+                      }
+                      self.showErrorMessage(title: "Error with Login", body: "There was an error while logging into google. Please Try Again.")
+                    return
+                  }
+                    print("user is signed in!")
+                    FirebaseAnalytics.Analytics.logEvent("google_signin", parameters: [AnalyticsParameterScreenName: "login_view"])
+                    
+                    self.db.collection("users").document((user?.user.uid)!).setData([
+                        "full_name": "\(user?.user.displayName ?? "")",
+                        "email": "\(user?.user.email ?? "")",
+                        "profileImageURL": "\(user?.user.photoURL?.absoluteString ?? "")",
+                        "username": "\((user?.user.email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())"
+                    ], merge: true) { err in
+                        if let err = err {
+                            print("Error writing document: \(err)")
+                            DispatchQueue.main.async {
+                                LoadingOverlay.shared.hideOverlayView()
+                                self.showErrorMessage(title: "Error with login", body: "We are having trouble communicating with our servers. Please try again.")
+                            }
+                        } else {
+                            print("Document successfully written!")
+                            self.db.collection("user-locations").document((user?.user.uid)!).setData([
+                                "username": "\((user?.user.email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())",
+                                "profileImageURL": "\(user?.user.photoURL?.absoluteString ?? "")",
+                                "uid": "\((user?.user.uid)!)",
+                                "full_name": "\(user?.user.displayName ?? "")"
+                            ], merge: true) { err in
+                                if let err = err {
+                                    print("Error writing document: \(err)")
+                                    
+                                } else {
+                                    print("* Successfully updated users location to firestore")
+                                    DispatchQueue.main.async {
+                                        LoadingOverlay.shared.hideOverlayView()
+                                    }
+                                    self.presentingViewController?.dismiss(animated: true, completion: nil)
+                                    
+                                }
+                            }
+                        }
+                    }
+                    
+
+        //            self.dismiss(animated: true, completion: nil)
+                })
+
+              // ...
+            }
+        }
+    }
       // Start Google OAuth2 Authentication
       func sign(_ signIn: GIDSignIn?, present viewController: UIViewController?) {
       
@@ -579,4 +806,100 @@ extension UITextField {
         self.layer.borderWidth = 1
         self.leftViewMode = .always
     }
+    func styleSearchBar() {
+        self.setLeftPaddingPoints(10)
+        self.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+//        self.layer.cornerRadius = 25
+        self.layer.cornerRadius = 20
+        self.backgroundColor = .white
+        self.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
+        self.layer.shadowOffset = CGSize(width: 0, height: 3)
+        self.layer.shadowOpacity = 0.4
+        self.layer.shadowRadius = 4
+        self.layer.borderColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
+        self.layer.borderWidth = 1
+        self.leftViewMode = .always
+    }
+}
+@available(iOS 13.0, *)
+extension LoginViewController: ASAuthorizationControllerDelegate {
+
+  func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+    if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+      guard let nonce = currentNonce else {
+        fatalError("Invalid state: A login callback was received, but no login request was sent.")
+      }
+      guard let appleIDToken = appleIDCredential.identityToken else {
+        print("Unable to fetch identity token")
+        return
+      }
+      guard let idTokenString = String(data: appleIDToken, encoding: .utf8) else {
+        print("Unable to serialize token string from data: \(appleIDToken.debugDescription)")
+        return
+      }
+      // Initialize a Firebase credential.
+      let credential = OAuthProvider.credential(withProviderID: "apple.com",
+                                                idToken: idTokenString,
+                                                rawNonce: nonce)
+      // Sign in with Firebase.
+      Auth.auth().signIn(with: credential) { (authResult, error) in
+          if (error != nil) {
+          // Error. If error.code == .MissingOrInvalidNonce, make sure
+          // you're sending the SHA256-hashed nonce as a hex string with
+          // your request to Apple.
+              print(error?.localizedDescription)
+          return
+        }
+        // User is signed in to Firebase with Apple.
+        // ...
+          print("* finished login with apple")
+          let fullname = authResult?.user.displayName
+          let email = authResult?.user.email
+          let uid = authResult?.user.uid
+          FirebaseAnalytics.Analytics.logEvent("apple_signin", parameters: [AnalyticsParameterScreenName: "login_view"])
+          
+          self.db.collection("users").document((uid)!).setData([
+              "full_name": "\(fullname as! String)",
+              "email": "\(email as! String)",
+              "profileImageURL": "\(authResult?.user.photoURL?.absoluteString ?? "")",
+              "username": "\((email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())",
+              "uid": uid as! String
+          ], merge: true) { err in
+              if let err = err {
+                  print("Error writing document: \(err)")
+                  DispatchQueue.main.async {
+                      LoadingOverlay.shared.hideOverlayView()
+                      self.showErrorMessage(title: "Error with login", body: "We are having trouble communicating with our servers. Please try again.")
+                  }
+              } else {
+                  print("Document successfully written!")
+                  self.db.collection("user-locations").document((uid)!).setData([
+                    "username": "\((email?.split(separator: "@")[0].replacingOccurrences(of: "@", with: "") ?? "").lowercased())",
+                    "profileImageURL": "\(authResult?.user.photoURL?.absoluteString ?? "")",
+                      "uid": "\(uid as! String)",
+                      "full_name": "\(fullname as! String)"
+                  ], merge: true) { err in
+                      if let err = err {
+                          print("Error writing document: \(err)")
+                          
+                      } else {
+                          print("* Successfully updated users location to firestore")
+                          DispatchQueue.main.async {
+                              LoadingOverlay.shared.hideOverlayView()
+                          }
+                          self.presentingViewController?.dismiss(animated: true, completion: nil)
+                          
+                      }
+                  }
+              }
+          }
+      }
+    }
+  }
+
+  func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+    // Handle error.
+    print("Sign in with Apple errored: \(error)")
+  }
+
 }

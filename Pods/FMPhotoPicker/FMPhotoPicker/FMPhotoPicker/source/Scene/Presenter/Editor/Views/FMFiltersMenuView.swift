@@ -8,7 +8,7 @@
 
 import UIKit
 
-public class FMFiltersMenuView: UIView {
+class FMFiltersMenuView: UIView {
     private let collectionView: UICollectionView
     private var availableFilters: [FMFilterable]
     private var demoImages: [String:UIImage] = [:]
@@ -72,7 +72,7 @@ public class FMFiltersMenuView: UIView {
         bottomAnchor.constraint(equalTo: parenetView.bottomAnchor).isActive = true
     }
     
-    public override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if let observedObject = object as? UICollectionView, observedObject == collectionView {
             collectionView.removeObserver(self, forKeyPath: "contentSize")
             isObservingCollectionView = false
@@ -95,11 +95,11 @@ public class FMFiltersMenuView: UIView {
 }
 
 extension FMFiltersMenuView: UICollectionViewDataSource {
-    public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return availableFilters.count
     }
     
-    public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FMFilterCell.reussId, for: indexPath) as? FMFilterCell
             else { return UICollectionViewCell() }
         
@@ -122,7 +122,7 @@ extension FMFiltersMenuView: UICollectionViewDataSource {
     
 }
 extension FMFiltersMenuView: UICollectionViewDelegate {
-    public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let filter = availableFilters[indexPath.item]
         
         let prevSelectedCellIndex = selectedCellIndex

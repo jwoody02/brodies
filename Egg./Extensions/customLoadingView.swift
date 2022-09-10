@@ -65,7 +65,14 @@ class DesignableUITextField: UITextField {
             updateView()
         }
     }
-    
+    override func clearButtonRect(forBounds bounds: CGRect) -> CGRect {
+
+        let originalRect = super.clearButtonRect(forBounds: bounds)
+
+        //move 10 points left
+
+        return originalRect.offsetBy(dx: -10, dy: 0)
+    }
     func updateView() {
         if let image = leftImage {
             leftViewMode = UITextField.ViewMode.always

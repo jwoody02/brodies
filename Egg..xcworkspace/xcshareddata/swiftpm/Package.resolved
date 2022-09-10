@@ -10,6 +10,33 @@
       }
     },
     {
+      "identity" : "rxswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "state" : {
+        "revision" : "b4307ba0b6425c0ba4178e138799946c3da594f8",
+        "version" : "6.5.0"
+      }
+    },
+    {
+      "identity" : "transitionpatch",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/TransitionPatch.git",
+      "state" : {
+        "revision" : "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
+        "version" : "1.0.5"
+      }
+    },
+    {
+      "identity" : "verge",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/Verge.git",
+      "state" : {
+        "revision" : "5a296bbc461b518be37afbeae31661ad3cd246ca",
+        "version" : "8.18.0"
+      }
+    },
+    {
       "identity" : "with",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/eonist/With.git",

@@ -15,7 +15,7 @@ import Kingfisher
 import SpriteKit
 import FirebaseAnalytics
 
-struct commentStruct {
+struct commentStruct: Equatable {
     var authorID = ""
     var commentID = ""
     var authorUserName = ""
@@ -26,6 +26,9 @@ struct commentStruct {
     var firstStoryUID = ""
     var numberOfLikes = Int(0)
     var isLiked = false
+    static func ==(lhs: commentStruct, rhs: commentStruct) -> Bool {
+        return lhs.authorID == rhs.authorID && lhs.commentID == rhs.commentID && lhs.authorUserName == rhs.authorUserName && lhs.authorProfilePic == rhs.authorProfilePic && lhs.commentText == rhs.commentText && lhs.createdAt == rhs.createdAt
+    }
 }
 class commentTableViewCell: UITableViewCell {
     private var db = Firestore.firestore()
@@ -90,9 +93,14 @@ class commentTableViewCell: UITableViewCell {
         likeButton.centerVertically()
         likeButton.backgroundColor = hexStringToUIColor(hex: Constants.surfaceColor)
         likeButton.layer.cornerRadius = 4
-        likeButton.frame = CGRect(x: Int(self.frame.width) - likebuttonWidth - 15, y: Int(profilePicImage.frame.minY), width: likebuttonWidth, height: 80)
+        likeButton.frame = CGRect(x: Int(self.frame.width) - likebuttonWidth - 15, y: Int(profilePicImage.frame.minY) + 10, width: likebuttonWidth, height: 80)
         likeButton.unlikedImage = UIImage(systemName: "heart")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .semibold, scale: .medium))?.image(withTintColor: .lightGray)
         likeButton.setDefaultImage()
+        if Constants.isDebugEnabled {
+//            var window : UIWindow = UIApplication.shared.keyWindow!
+//            window.showDebugMenu()
+            self.debuggingStyle = true
+        }
     }
     func hexStringToUIColor (hex:String) -> UIColor {
         var cString:String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
@@ -139,17 +147,25 @@ class commentTableViewCell: UITableViewCell {
 //            let incr = FieldValue.increment(value)
 //
 //            postsRef.document(originalPostAuthorID).collection("posts").document(originalPostID).collection("comments").document(commentID).updateData(["likes_count":incr]) {err in
-                
-                postsRef.document(self.originalPostAuthorID).collection("posts").document(self.originalPostID).collection("comments").document(self.commentID).collection("likes").document(authorID).setData([
-                    "uid": "\(authorID)",
-                    "likedAtTimeStamp": Int(timestamp)
+            let userIDz = Auth.auth().currentUser?.uid
+//            postsRef.document(userID).collection("posts").document(id).updateData(["likes_count":incr])
+            self.db.collection("user-locations").document(userIDz!).getDocument { (document, err) in
+                print("* doc: \(document)")
+                if ((document?.exists) != nil) && document?.exists == true {
+                    let data = document?.data()! as! [String: AnyObject]
+                    let usrname = data["username"] as? String ?? ""
+                    postsRef.document(self.originalPostAuthorID).collection("posts").document(self.originalPostID).collection("comments").document(self.commentID).collection("likes").document(userIDz!).setData([
+                    "uid": "\(userIDz as? String ?? "")",
+                    "likedAtTimeStamp": Int(timestamp),
+                    "username": usrname
                 ], merge: true) { err in
                     print("* successfully liked post")
                     
                     self.isCurrentlySavingData = false
                 }
             
-            
+                }
+            }
         }
     }
     func unlikeComment(authorID: String) {
@@ -182,8 +198,22 @@ class commentTableViewCell: UITableViewCell {
         }
         
     }
+    @IBAction func openProfile(_ sender: Any) {
+        openProfileForUser(withUID: actualComment.authorID)
+    }
     func getHeightForEverything() -> CGFloat {
         return timeSincePostedLabel.frame.maxY
+    }
+    func openProfileForUser(withUID: String) {
+        if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "MyProfileViewController") as? MyProfileViewController {
+            if let navigator = self.findViewController()?.navigationController {
+                vc.uidOfProfile = withUID
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                navigator.pushViewController(vc, animated: true)
+
+            }
+        }
     }
 }
 class CommentsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
@@ -197,6 +227,7 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
     }
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "commentTableViewCell", for: indexPath) as! commentTableViewCell
+        cell.likeButton.setAsCommentLike()
         cell.styleElements()
         let comment = comments[indexPath.row]
         cell.actualComment = comment
@@ -219,7 +250,12 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
         cell.userID = comment.authorID
         
 //        cell.usernameButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
-        cell.setUserImage(fromUrl: comment.authorProfilePic)
+        if comment.authorProfilePic == "" {
+            cell.profilePicImage.image = UIImage(named: "no-profile-img.jpeg")
+        } else {
+            cell.setUserImage(fromUrl: comment.authorProfilePic)
+        }
+        
         
         
 //        cell.usernameButton.frame = CGRect(x: cell.usernameButton.frame.minX, y: cell.usernameButton.frame.minY, width: cell.usernameButton.frame.width, height: 14)
@@ -235,15 +271,18 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
         cell.replyButton.frame = CGRect(x: cell.timeSincePostedLabel.frame.maxX+10, y: cell.timeSincePostedLabel.frame.minY, width: UIScreen.main.bounds.width - cell.timeSincePostedLabel.frame.maxX - 15, height: 16)
         
         cell.likeButton.setNewLikeAmount(to: comment.numberOfLikes)
+        print("* set likie button to: comment.numberOfLikes")
         cell.likeButton.contentMode = .scaleAspectFit
         cell.likeButton.imageView?.contentMode = .scaleAspectFit
         cell.likeButton.centerVertically()
         cell.likeButton.backgroundColor = .clear
+        cell.likeButton.contentMode = .center
         
         if comment.isLiked == true {
             print("* comment is liked: '\(comment.commentText)'")
             cell.likeButton.setImage(cell.likeButton.likedImage, for: .normal)
             cell.likeButton.isLiked = true
+            cell.likeButton.tintColor = Constants.universalRed.hexToUiColor()
         }
         
         cell.selectionStyle = .none
@@ -265,6 +304,10 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
         let calculatedHeight = expectedLabelHeight + 14 + 15 + 16 + 20
         print("* [\(indexPath.row)] final height \(calculatedHeight)")
         return calculatedHeight ?? 120
+    }
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
     }
     @IBOutlet weak var commentsTableView: UITableView!
     private var db = Firestore.firestore()
@@ -300,6 +343,7 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
     
     var currentUserUsername = ""
     var currentUserProfilePic = ""
+    var highlightCommentUID = "" // when opening comment from notifications page
     
     var hasReachedEndOfComments = false
     override func viewDidLoad() {
@@ -312,6 +356,9 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
         ])
 //        commentsTableView.delegate = self
 //        commentsTableView.dataSource = self
+        backButton.setTitle("", for: .normal)
+        postButton.setTitle("", for: .normal)
+        
         commentsTableView.backgroundColor = .clear
         commentTextField.placeholder = "Comment on \(actualPost.username)'s post" // OR "Reply to username's comment" for comment replies
 //        addGesture()
@@ -321,7 +368,7 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
         postButton.backgroundColor = hexStringToUIColor(hex: Constants.secondaryColor)
         postButton.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
 //        postButton.titleLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
-        postButton.layer.cornerRadius = 4
+        postButton.layer.cornerRadius = 12
         
         backButton.frame = CGRect(x: 0, y: 30, width: 50, height: 60)
         backButton.tintColor = .darkGray
@@ -362,13 +409,17 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
         NotificationCenter.default.addObserver(self, selector: #selector(CommentsViewController.keyboardWillHide), name: UIResponder.keyboardWillHideNotification, object: nil)
         commentTableView.rowHeight = CGFloat(120)
         if Constants.isDebugEnabled {
-            var window : UIWindow = UIApplication.shared.keyWindow!
-            window.showDebugMenu()
+//            var window : UIWindow = UIApplication.shared.keyWindow!
+//            window.showDebugMenu()
+            self.view.debuggingStyle = true
         }
         commentTableView.frame = CGRect(x: 0, y: topWhiteView.frame.maxY, width: UIScreen.main.bounds.width, height: bottomWhiteView.frame.minY - topWhiteView.frame.maxY + 10)
+        commentTableView.showsVerticalScrollIndicator = false
 //        hideKeyboardWhenTappedAround()
     }
     @IBAction func postButtonPressed(_ sender: Any) {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
         let postsRef = db.collection("posts")
         let timestamp = NSDate().timeIntervalSince1970
 //        let value: Double = 1
@@ -543,12 +594,19 @@ class CommentsViewController: UIViewController, UITableViewDelegate, UITableView
         self.bottomWhiteView.layer.shadowRadius = Constants.borderRadius
         
         
-        commentTextField.styleComponents()
+        commentTextField.styleSearchBar()
+        commentTextField.backgroundColor = hexStringToUIColor(hex: Constants.backgroundColor)
         commentTextField.frame = CGRect(x: 15, y: 50, width: UIScreen.main.bounds.width - 30, height: 50)
+        let paddingView: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 15, height: 50))
+        commentTextField.leftView = paddingView
+        commentTextField.leftViewMode = .always
         
         let postButtonWidth = 60
-        let postButtonPadd = 7
-        postButton.frame = CGRect(x: Int(commentTextField.frame.maxX) - postButtonWidth - postButtonPadd, y: Int(commentTextField.frame.minY)+postButtonPadd, width: Int(CGFloat(postButtonWidth)), height: Int(commentTextField.frame.minY) - (2*postButtonPadd))
+        
+        let postButtonPadd = 10
+        let newWidth = Int(commentTextField.frame.minY) - (2*postButtonPadd)
+//        postButton.frame = CGRect(x: Int(commentTextField.frame.maxX) - postButtonWidth - postButtonPadd, y: Int(commentTextField.frame.minY)+postButtonPadd, width: Int(CGFloat(postButtonWidth)), height: Int(commentTextField.frame.minY) - (2*postButtonPadd))
+        postButton.frame = CGRect(x: Int(commentTextField.frame.maxX) - newWidth - postButtonPadd, y: Int(commentTextField.frame.minY)+postButtonPadd, width: newWidth, height: newWidth)
     }
     func suffixNumber(number:NSNumber) -> NSString {
 

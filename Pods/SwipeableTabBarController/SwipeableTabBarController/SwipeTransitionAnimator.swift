@@ -26,7 +26,7 @@ class SwipeTransitionAnimator: NSObject, SwipeTransitioningProtocol {
     /// - Parameters:
     ///   - animationDuration: time the transitioning animation takes to complete
     ///   - animationType: animation type to perform while transitioning
-    init(animationDuration: TimeInterval = 0.2,
+    init(animationDuration: TimeInterval = 0.33,
          targetEdge: UIRectEdge = .right,
          animationType: SwipeAnimationTypeProtocol = SwipeAnimationType.sideBySide) {
         self.animationDuration = animationDuration

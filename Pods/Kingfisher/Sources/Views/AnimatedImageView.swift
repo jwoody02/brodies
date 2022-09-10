@@ -227,19 +227,7 @@ open class AnimatedImageView: UIImageView {
     }
     
     override open func display(_ layer: CALayer) {
-        if let currentFrame = animator?.currentFrameImage {
-            layer.contents = currentFrame.cgImage
-        } else {
-            if #available(iOS 15, *),
-               // https://developer.apple.com/documentation/xcode-release-notes/xcode-13-release-notes
-               // Apple Xcode 13 issue 83378814
-                ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 15
-            {
-                super.display(layer)
-            } else {
-                layer.contents = image?.cgImage
-            }
-        }
+        layer.contents = animator?.currentFrameImage?.cgImage ?? image?.cgImage
     }
     
     override open func didMoveToWindow() {
@@ -484,6 +472,7 @@ extension AnimatedImageView {
         }
         
         deinit {
+            resetAnimatedFrames()
             GraphicsContext.end()
         }
 
@@ -571,7 +560,16 @@ extension AnimatedImageView {
                 return
             }
 
-            animatedFrames[previousFrameIndex] = animatedFrames[previousFrameIndex]?.placeholderFrame
+            let previousFrame = animatedFrames[previousFrameIndex]
+            animatedFrames[previousFrameIndex] = previousFrame?.placeholderFrame
+            // ensure the image dealloc in main thread
+            defer {
+                if let image = previousFrame?.image {
+                    DispatchQueue.main.async {
+                        _ = image
+                    }
+                }
+            }
 
             preloadIndexes(start: currentFrameIndex).forEach { index in
                 guard let currentAnimatedFrame = animatedFrames[index] else { return }

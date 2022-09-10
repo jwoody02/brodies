@@ -1,0 +1,83 @@
+{
+
+    "version":1.12,
+
+    "stories": [{
+            "name":"Story 1",
+            "contentNature":0,
+            "previewAsset":"dog",
+            "contents": 
+            [
+                {
+                    "contentType":0,
+                    "assetName":"doghd",
+                    "externalURL":"fdfd",
+                    "duration":10
+                }
+            ]
+        },
+
+        {
+            "name":"Story 2",
+            "contentNature":0, 
+            "previewAsset":"cat",
+            "contents": 
+            [
+                {
+                    "contentType":0,
+                    "assetName":"cathd",
+                    "externalURL":"fdfd",
+                    "duration":10
+                },
+                {
+                    "contentType":0,
+                    "assetName":"pandahd",
+                    "externalURL":"fdfd",
+                    "duration":10
+                }
+            ]
+        },
+
+        {
+            "name":"Story 3",
+            "contentNature":0, 
+            "previewAsset":"panda",
+            "contents": 
+            [
+                {
+                    "contentType":1,
+                    "assetName":"http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                    "externalURL":"fdfd",
+                    "duration":10
+                },
+                {
+                    "contentType":0,
+                    "assetName":"cathd",
+                    "externalURL":"https://google.com",
+                    "duration":10
+                }
+            ]
+        },
+
+        {
+            "name":"Story 4",
+            "contentNature":0, 
+            "previewAsset":"giraffe",
+            "contents": 
+            [
+                {
+                    "contentType":0,
+                    "assetName":"giraffehd",
+                    "externalURL":"fdfd",
+                    "duration":10
+                },
+                {
+                    "contentType":0,
+                    "assetName":"pandahd",
+                    "externalURL":"fdfd",
+                    "duration":10
+                }
+            ]
+        }
+    ]
+}

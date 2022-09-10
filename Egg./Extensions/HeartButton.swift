@@ -5,12 +5,35 @@
 //  Created by Jordan Wood on 6/17/22.
 //
 import UIKit
+extension String {
+    func hexToUiColor() -> UIColor {
+        var cString:String = self.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
 
+        if (cString.hasPrefix("#")) {
+            cString.remove(at: cString.startIndex)
+        }
+
+        if ((cString.count) != 6) {
+            return UIColor.gray
+        }
+
+        var rgbValue:UInt64 = 0
+        Scanner(string: cString).scanHexInt64(&rgbValue)
+
+        return UIColor(
+            red: CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0,
+            green: CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0,
+            blue: CGFloat(rgbValue & 0x0000FF) / 255.0,
+            alpha: CGFloat(1.0)
+        )
+    }
+}
 class HeartButton: UIButton {
 var isLiked = false
-  
-    var unlikedImage = UIImage(systemName: "heart")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .red)
-    let likedImage = UIImage(systemName: "heart.fill")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .red)
+//    var unlikedImage = UIImage(systemName: "heart")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .red)
+//    let likedImage = UIImage(systemName: "heart.fill")?.applyingSymbolConfiguration(.init(pointSize: 14, weight: .medium, scale: .medium))?.image(withTintColor: .red)
+    var unlikedImage = UIImage(systemName: "heart")?.applyingSymbolConfiguration(.init(pointSize: 19, weight: .regular, scale: .medium))?.image(withTintColor: Constants.textColor.hexToUiColor())
+    var likedImage = UIImage(systemName: "heart.fill")?.applyingSymbolConfiguration(.init(pointSize: 19, weight: .medium, scale: .medium))?.image(withTintColor: Constants.universalRed.hexToUiColor())
   
   private let unlikedScale: CGFloat = 0.7
   private let likedScale: CGFloat = 1.3
@@ -22,10 +45,15 @@ var isLiked = false
 //
 //    
 //  }
+    func setAsCommentLike() {
+        unlikedImage = UIImage(systemName: "heart")?.applyingSymbolConfiguration(.init(pointSize: 15, weight: .medium, scale: .medium))?.image(withTintColor: .black)
+        likedImage = UIImage(systemName: "heart.fill")?.applyingSymbolConfiguration(.init(pointSize: 15, weight: .medium, scale: .medium))?.image(withTintColor: .red)
+    }
     func setDefaultImage() {
         self.imageView?.contentMode = .scaleAspectFit
         self.setInsets(forContentPadding: UIEdgeInsets(top: 12, left: 2, bottom: 2, right: 2), imageTitlePadding: CGFloat(14))
-        self.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+        self.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Regular", size: 10)
+        self.tintColor = .darkGray
         setImage(unlikedImage, for: .normal)
     }
 //  required init?(coder: NSCoder) {
@@ -34,14 +62,42 @@ var isLiked = false
 
   public func flipLikedState() {
     isLiked = !isLiked
+      if isLiked {
+          self.tintColor = Constants.universalRed.hexToUiColor()
+      } else {
+          self.tintColor = .darkGray
+      }
     animate()
       self.sizeToFit()
   }
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        self.contentHorizontalAlignment = .center
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        centerButtonImageAndTitle()
+    }
+
+    private func centerButtonImageAndTitle() {
+        let titleSize = self.titleLabel?.frame.size ?? .zero
+        let imageSize = self.imageView?.frame.size  ?? .zero
+        let spacing: CGFloat = 6.0
+        self.imageEdgeInsets = UIEdgeInsets(top: -(titleSize.height + spacing),left: 0, bottom: 0, right:  -titleSize.width)
+        self.titleEdgeInsets = UIEdgeInsets(top: 0, left: -imageSize.width, bottom: -(imageSize.height + spacing), right: 0)
+     }
     public func setNewLikeAmount(to: Int) {
         self.likesCount = to
-        self.setTitle("\(suffixNumber(number: to as NSNumber).replacingOccurrences(of: ".0", with: ""))", for: .normal)
-        self.sizeToFit()
+        print("[heart button] setting to \(suffixNumber(number: to as NSNumber).replacingOccurrences(of: ".0", with: ""))")
+        DispatchQueue.main.async {
+            self.setTitle("\(self.suffixNumber(number: to as NSNumber).replacingOccurrences(of: ".0", with: ""))", for: .normal)
+            self.sizeToFit()
+            self.centerButtonImageAndTitle()
+        }
+        
     }
+    
     func suffixNumber(number:NSNumber) -> NSString {
 
         var num:Double = number.doubleValue;
@@ -55,7 +111,7 @@ var isLiked = false
 
         let exp:Int = Int(log10(num) / 3.0 ); //log10(1000));
 
-        let units:[String] = ["K","M","G","T","P","E"];
+        let units:[String] = ["k","m","G","T","P","E"];
 
         let roundedNum:Double = round(10 * num / pow(1000.0,Double(exp))) / 10;
 
@@ -67,6 +123,11 @@ var isLiked = false
       let newScale = self.isLiked ? self.likedScale : self.unlikedScale
       self.transform = self.transform.scaledBy(x: newScale, y: newScale)
       self.setImage(newImage, for: .normal)
+        if newImage == self.likedImage {
+            self.tintColor = Constants.universalRed.hexToUiColor()
+        } else {
+            self.tintColor = .darkGray
+        }
     }, completion: { _ in
       UIView.animate(withDuration: 0.1, animations: {
         self.transform = CGAffineTransform.identity
