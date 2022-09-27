@@ -16,6 +16,11 @@ import FirebaseAnalytics
 import SkeletonView
 import NextLevel
 import DGElasticPullToRefresh
+import ActiveLabel
+import Presentr
+import FirebaseDynamicLinks
+import SPAlert
+import CryptoKit
 
 class userProfileImagePosts: UICollectionViewCell {
     
@@ -161,7 +166,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
     
     @IBOutlet weak var usernameLabel: UILabel!
     @IBOutlet weak var fullNameLabel: UILabel!
-    @IBOutlet weak var bioLabel: UILabel!
+    @IBOutlet weak var bioLabel: ActiveLabel!
     @IBOutlet weak var followButton: UIButton!
     @IBOutlet weak var messageButton: UIButton!
     @IBOutlet weak var addToStoryButton: UIButton!
@@ -177,6 +182,12 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
     
     @IBOutlet weak var editProfileButton: UIButton!
     
+    @IBOutlet weak var privateImage: UIImageView!
+    @IBOutlet weak var privateAccountLabel: UILabel!
+    @IBOutlet weak var viewpostsByFollowingLabel: UILabel!
+    
+    @IBOutlet weak var brodieBanner: UIImageView!
+    
     let defaults = UserDefaults.standard
     
     var uidOfProfile = ""
@@ -190,6 +201,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
     
     var imagePosts: [imagePost]? = []
     var selectedIndexPath: IndexPath!
+    let presenter = Presentr(presentationType: .alert)
     
     public var isFollowing = false
     public var currentUsername = ""
@@ -204,6 +216,10 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
     override func viewDidLoad() {
         super.viewDidLoad()
         //        self.view.backgroundColor = hexStringToUIColor(hex: Constants.backgroundColor)
+        reloadEverything()
+    }
+    func reloadEverything() {
+        imagePosts?.removeAll()
         self.view.backgroundColor = .white
         styleElements()
         addToStoryButton.setTitle("", for: .normal)
@@ -217,6 +233,9 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
        layout.minimumInteritemSpacing = spacing
        self.postsCollectionView?.collectionViewLayout = layout
         postsCollectionView.showAnimatedSkeleton(usingColor: .clouds, transition: .crossDissolve(0.25))
+        followButton.isHidden = true
+//        followButton.alpha = 0
+        messageButton.isHidden = true
         if Auth.auth().currentUser?.uid == nil {
             //            // show login view
             print("not valid user, pushing login")
@@ -242,7 +261,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                 setUserImage(with: user.profileImageUrl)
                 
                 usernameLabel.text = "\(user.username)"
-                usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+                usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 15)
                 usernameLabel.sizeToFit()
                 usernameLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (usernameLabel.frame.width / 2), y: 50, width: usernameLabel.frame.width, height: usernameLabel.frame.height)
                 
@@ -256,7 +275,22 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                 upperRightThreeDotsbutton.isHidden = false
                 bellButton.isHidden = false
             }
-            
+            if uidOfProfile == "1drvriZljTSCXM7qSFyJHCLqENE2" && Auth.auth().currentUser?.uid != uidOfProfile {
+                followButton.isHidden = true
+                followButton.alpha = 0
+                followingButton.isUserInteractionEnabled = false
+                brodieBanner.isHidden = false
+                
+            }
+            if uidOfProfile == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+                
+                brodieBanner.frame = CGRect(x: 0, y: 0, width: 120, height: 25)
+                brodieBanner.center.x = self.profilePicImage.center.x
+                    brodieBanner.center.y = self.profilePicImage.center.y + 45
+                brodieBanner.isHidden = false
+                fullNameLabel.isHidden = true
+                fullNameLabel.alpha = 0
+            }
             let postsRef = db.collection("posts")
             query = postsRef.document(uidOfProfile).collection("posts").order(by: "createdAt", descending: true).limit(to: 12)
             Analytics.logEvent("view_profile", parameters: [
@@ -267,14 +301,36 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
         }
         postsCollectionView.dataSource = self
         postsCollectionView.delegate = self
-        let screenWidth = UIScreen.main.bounds.width
-//        let layout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
-//        layout.sectionInset = UIEdgeInsets(top: CGFloat(Constants.imagePadding), left: CGFloat(Constants.imagePadding), bottom: CGFloat(Constants.imagePadding), right: CGFloat(Constants.imagePadding))
-//        layout.itemSize = CGSize(width: (Int(screenWidth) - Constants.imagePadding*4)/3, height: (Int(screenWidth) - Constants.imagePadding*4)/3)
-//        layout.minimumInteritemSpacing = CGFloat(Constants.imagePadding)
-//        layout.minimumLineSpacing = CGFloat(Constants.imagePadding)
-//        postsCollectionView!.collectionViewLayout = layout
         
+        bioLabel.enabledTypes = [.mention, .hashtag, .url]
+        bioLabel.customize { label in
+            label.hashtagColor = Constants.primaryColor.hexToUiColor().withAlphaComponent(0.7)
+            label.mentionColor = Constants.primaryColor.hexToUiColor()
+            label.URLColor = Constants.primaryColor.hexToUiColor()
+            label.handleMentionTap { userHandle in
+                print("* opening profile for user: @\(userHandle)")
+                let userLocalRef = self.db.collection("user-locations").whereField("username", isEqualTo: userHandle.lowercased()).limit(to: 1)
+                userLocalRef.getDocuments() { (querySnapshot, err) in
+                    if let err = err {
+                        print("Error getting documents: \(err)")
+                    } else {
+                        if querySnapshot?.count != 0 {
+                            print("* got user doc: \(querySnapshot?.documents[0].documentID)")
+                            self.openProfileForUser(withUID: (querySnapshot?.documents[0].documentID)!)
+                        }
+                    }
+                }
+            }
+//            label.handleHashtagTap { self.alert("Hashtag", message: $0) }
+            label.handleURLTap { url in
+                print("* opening url: \(url)")
+                if #available(iOS 10.0, *) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                } else {
+                    UIApplication.shared.openURL(url)
+                }
+            }
+        }
         updateForDebug()
         
         // Initialize tableView
@@ -302,6 +358,62 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
         followButton.isHidden = true
         messageButton.isHidden = true
         profilePicImage.isUserInteractionEnabled = true
+        actualFollowersLabel.font = UIFont(name: Constants.globalFont, size: 13)
+        actualFollowingLabel.font = UIFont(name: Constants.globalFont, size: 13)
+        privateAccountLabel.font = UIFont(name: Constants.globalFontBold, size: 24)
+        viewpostsByFollowingLabel.font = UIFont(name: Constants.globalFontMedium, size: 14)
+    }
+    func showErrorMessage(title: String, body: String) {
+        DispatchQueue.main.async {
+            
+        
+        var alertController: AlertViewController = {
+            let font = UIFont(name: Constants.globalFontBold, size: 16)
+            let alertController = AlertViewController(title: title, body: body, titleFont: UIFont(name: Constants.globalFontBold, size: 14), bodyFont: UIFont(name: Constants.globalFont, size: 13), buttonFont: UIFont(name: Constants.globalFontMedium, size: 14))
+            let cancelAction = AlertAction(title: "Ok", style: .custom(textColor: self.hexStringToUIColor(hex: Constants.primaryColor))) {
+                
+            }
+            alertController.addAction(cancelAction)
+            //                        alertController.addAction(okAction)
+            return alertController
+        }()
+        self.presenter.presentationType = .alert
+        self.presenter.transitionType = nil
+        self.presenter.dismissTransitionType = nil
+        self.presenter.dismissAnimated = true
+        let animation = CoverVerticalAnimation(options: .spring(duration: 0.5,
+                                                                delay: 0,
+                                                                damping: 0.7,
+                                                                velocity: 0))
+        let coverVerticalWithSpring = TransitionType.custom(animation)
+        self.presenter.transitionType = coverVerticalWithSpring
+        self.presenter.dismissTransitionType = coverVerticalWithSpring
+        self.customPresentViewController(self.presenter, viewController: alertController, animated: true)
+        }
+    }
+    @IBAction func messagePressed(_ sender: Any) {
+        showErrorMessage(title: "Coming Soon", body: "Messaging will be coming in a future update, sorry if we gave u blue balls :P")
+        // create hash from current uid and user uid
+//        let combinedString = "\()"
+        let userID = Auth.auth().currentUser?.uid
+        var uidArray: [String] = [userID!, self.uidOfProfile]
+        uidArray = uidArray.sorted(by: { $1 > $0 })
+        let finString = "\(uidArray[0])\(uidArray[1])"
+        print("* hasing using new string: \(finString)")
+        let inputData = Data(finString.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        print("* finding conversation with hash id: \(hashed.description)")
+    }
+    func openProfileForUser(withUID: String) {
+        if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "MyProfileViewController") as? MyProfileViewController {
+            if let navigator = self.navigationController {
+                vc.uidOfProfile = withUID
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                navigator.pushViewController(vc, animated: true)
+
+            }
+        }
     }
     @IBAction func NotificationsSettingPressed(_ sender: Any) {
         let vc = ProfileNotificationsPopup()
@@ -346,6 +458,11 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                         post.imageHash = values?["imageHash"] as? String ?? ""
                         post.username = self.user.username
                         post.storageRefForThumbnailImage = values?["storage_ref"] as? String ?? ""
+                        let images = values?["images"] as? [String] ?? []
+                        if images.count > 1 {
+                            print("* multiple images detected")
+                            post.multiImageUrls = images
+                        }
                         self.imagePosts?.append(post) // delete if use likes thing
                         mainPostDispatchQueue.leave() // delete if use likes thing again
                         
@@ -360,6 +477,10 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                         //                            mainPostDispatchQueue.leave()
                         //                        }
                         
+                    }
+                    print("* [SNID] imposts count = \( self.imagePosts?.count ); isFollowing = \(self.isFollowing); isPrivate = \(self.user.isPrivate)")
+                    if self.imagePosts?.count == 0 && ((self.isFollowing == true && self.user.isPrivate == true) || (self.user.isPrivate == false)) {
+                        print("* SHOW NO POSTS")
                     }
                     mainPostDispatchQueue.notify(queue: .main) {
                         self.imagePosts = self.imagePosts!.sorted (by: {$0.createdAt > $1.createdAt})
@@ -441,7 +562,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
         postsCollectionView.showsVerticalScrollIndicator = false
         followersButton.clipsToBounds = true
         
-        let refWidth = 40
+        let refWidth = 35
         let refY = 42
 //        settingsButton.setTitle("", for: .normal)
 //        settingsButton.layer.cornerRadius = 8
@@ -460,6 +581,9 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
         bellButton.setTitle("", for: .normal)
         bellButton.layer.cornerRadius = 8
         bellButton.frame = CGRect(x: Int(UIScreen.main.bounds.width) - (refWidth * 2) - (10), y: refY, width: refWidth, height: refWidth)
+        
+        followersButton.titleLabel?.font = UIFont(name: Constants.globalFontBold, size: 16)
+        followingButton.titleLabel?.font = UIFont(name: Constants.globalFontBold, size: 16)
     }
     @IBAction func settingsTapped(_ sender: Any) {
         let vc = SettingsPopupController()
@@ -469,7 +593,9 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
     @IBAction func threeDotsTapped(_ sender: Any) {
         let vc = ThreeDotsOnProfileController()
         vc.profileUID = self.uidOfProfile
-        vc.profileUserName = self.currentUsername
+        vc.profileUserName = self.usernameLabel.text ?? ""
+        vc.currentUsername = self.usernameLabel.text ?? ""
+        vc.currentProfilePic = self.currentProfilePic
         vc.parentVC = self
         vc.isBlocked = userHasBlocked
         self.navigationController?.presentPanModal(vc)
@@ -577,8 +703,16 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
             self.editProfileButton.layer.cornerRadius = 8
             
             if self.isCurrentUser == false {
-                self.followButton.fadeIn()
+                
                 self.messageButton.fadeIn()
+                if self.uidOfProfile == "1drvriZljTSCXM7qSFyJHCLqENE2" && self.isFollowing == true {
+                    self.followButton.isHidden = true
+                    self.messageButton.center.x = UIScreen.main.bounds.width / 2
+                    
+                } else {
+                    self.followButton.fadeIn()
+                    self.followButton.isUserInteractionEnabled = true
+                }
             }
             self.updatebasicInfo()
         }
@@ -598,8 +732,16 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
 //        
 //        followButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: spacing)
     }
+    
     public func styleForNotFollowing() {
-        self.followButton.setTitle("Follow", for: .normal)
+        if uidOfProfile == "1drvriZljTSCXM7qSFyJHCLqENE2" && self.isFollowing == true {
+            self.followButton.isHidden = true
+            self.followButton.alpha = 0
+            messageButton.center.x = UIScreen.main.bounds.width / 2
+        } else {
+            self.followButton.setTitle("Follow", for: .normal)
+        }
+        
         self.followButton.backgroundColor = self.hexStringToUIColor(hex: Constants.primaryColor)
         self.followButton.tintColor = .white
         self.followButton.clipsToBounds = true
@@ -619,7 +761,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                 followButton.isHidden = true
                 messageButton.isHidden = true
                 usernameLabel.text = "Blocked User"
-                self.usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+                self.usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 15)
                 self.usernameLabel.sizeToFit()
                 self.usernameLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (self.usernameLabel.frame.width / 2), y: 50, width: self.usernameLabel.frame.width, height: self.usernameLabel.frame.height)
                 self.usernameLabel.isHidden = false
@@ -644,7 +786,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                         followButton.isHidden = true
                         messageButton.isHidden = true
                         usernameLabel.text = "User not found"
-                        self.usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+                        self.usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 15)
                         self.usernameLabel.sizeToFit()
                         self.usernameLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (self.usernameLabel.frame.width / 2), y: 50, width: self.usernameLabel.frame.width, height: self.usernameLabel.frame.height)
                     } else {
@@ -663,10 +805,31 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                                 self.user.fullname = data["full_name"] as? String ?? ""
                                 self.user.isPrivate = data["isPrivate"] as? Bool ?? false
                                 print("* is user private: \(self.user.isPrivate)")
+                                privateImage.frame = CGRect(x: 0, y: topWhiteView.frame.maxY + 150, width: 100, height: 100)
+                                privateImage.center.x = UIScreen.main.bounds.width / 2
+                                privateAccountLabel.frame = CGRect(x: 0, y: privateImage.frame.maxY + 20, width: UIScreen.main.bounds.width, height: 25)
+                                privateAccountLabel.center.x = UIScreen.main.bounds.width / 2
+                                viewpostsByFollowingLabel.frame = CGRect(x: 0, y: privateAccountLabel.frame.maxY + 10, width: 220, height: 44)
+                                viewpostsByFollowingLabel.center.x = UIScreen.main.bounds.width / 2
                                 if self.user.isPrivate! && Auth.auth().currentUser?.uid != uidOfProfile && self.isFollowing == false {
                                     self.postsCollectionView.isHidden = true
                                     self.postsCollectionView.alpha = 0
                                     self.postsCollectionView.isUserInteractionEnabled = false
+                                   
+                                    privateImage.fadeIn()
+                                    privateAccountLabel.fadeIn()
+                                    viewpostsByFollowingLabel.fadeIn()
+                                    followingButton.isUserInteractionEnabled = false
+                                    followersButton.isUserInteractionEnabled = false
+                                }
+                                if self.imagePosts?.count == 0 && ((self.isFollowing == true && self.user.isPrivate == true) || (self.user.isPrivate == false)) {
+                                    print("* SHOW NO POSTS")
+                                    privateImage.image = UIImage(systemName: "camera")
+                                    privateAccountLabel.text = "No Posts"
+                                    viewpostsByFollowingLabel.text = "Smh, looks like \(self.user.username) has no posts"
+                                    privateImage.fadeIn()
+                                    privateAccountLabel.fadeIn()
+                                    viewpostsByFollowingLabel.fadeIn()
                                 }
                                 db.collection("pending-followers").document(uidOfProfile).collection("sub-pending-followers").document(Auth.auth().currentUser!.uid).getDocument() { [self] (pendingDoc, pendingError) in
                                     if let pendingDoc = pendingDoc {
@@ -688,7 +851,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                                 self.usernameLabel.text = "\(self.user.username)"
                                 
                                 currentUsername = self.user.username
-                                self.usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+                                self.usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 15)
                                 self.usernameLabel.sizeToFit()
                                 self.usernameLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (self.usernameLabel.frame.width / 2), y: 50, width: self.usernameLabel.frame.width, height: self.usernameLabel.frame.height)
                                 
@@ -711,7 +874,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                                 mainString = "\(mainString)  |  \(Int(data["brodie_score"] as? Int ?? 0).delimiter)"
                                 let range = (mainString as NSString).range(of: stringToColor)
                                 let rangeForBio = (mainString as NSString).range(of: addBioToColor)
-                                let LighterFont = UIFont(name: "\(Constants.globalFont)-LightItalic", size: 14)!
+                                let LighterFont = UIFont(name: Constants.globalFontItali, size: 13)!
                                 
                                 let mutableAttributedString = NSMutableAttributedString.init(string: mainString)
                                 mutableAttributedString.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.lightGray, range: range)
@@ -727,7 +890,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                                     print("* detected no bio")
                                     if self.isCurrentUser == true {
                                         bioString = "Add a bio in profile settings"
-                                        let LighterFont = UIFont(name: "\(Constants.globalFont)-LightItalic", size: 14)!
+                                        let LighterFont = UIFont(name: Constants.globalFontItali, size: 13)!
                                         self.bioLabel.font = LighterFont
                                         self.bioLabel.text = bioString
                                         self.bioLabel.textColor = UIColor.lightGray.withAlphaComponent(0.7)
@@ -750,7 +913,7 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
 //                                    self.bioLabel.attributedText = attributedString
                                     self.bioLabel.setLineSpacing(lineSpacing: 4.0)
                                     self.bioLabel.numberOfLines = 3
-                                    self.bioLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)!
+                                    self.bioLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)!
                                     self.bioLabel.fadeIn()
                                     let tmp = self.actualFollowingLabel.frame.maxX - self.actualFollowersLabel.frame.minX
                                     self.bioLabel.frame = CGRect(x: self.actualFollowersLabel.frame.minX, y: fullNameLabel.frame.maxY + 10, width: tmp, height: 60)
@@ -767,6 +930,11 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                                 
                                 messageButton.frame = CGRect(x: (Int(UIScreen.main.bounds.width) / 2) + (paddingBetween/2), y: Int(buttonsY), width: buttonsWidth, height:buttonsHeight)
                                 followButton.frame = CGRect(x: followx, y: Int(buttonsY), width:  Int(buttonsWidth), height: buttonsHeight)
+                                if self.uidOfProfile == "1drvriZljTSCXM7qSFyJHCLqENE2" && self.isFollowing == true {
+                                    self.followButton.isHidden = true
+                                    self.messageButton.center.x = UIScreen.main.bounds.width / 2
+                                    
+                                }
                                 followButton.isHidden = false
                                 messageButton.isHidden = false
                                 if Auth.auth().currentUser?.uid == uidOfProfile {
@@ -838,7 +1006,14 @@ class MyProfileViewController: UIViewController, UICollectionViewDelegate, UICol
                                     let userVals = userResult?.data() as? [String: Any]
                                     let followingCount = userVals?["following_count"] as? Int ?? 0
                                     print("* FOLLOWING COUNT [z]: \(followingCount)")
-                                    self.followingButton.setTitle("\(followingCount.roundedWithAbbreviations)", for: .normal)
+                                    
+                                    if uidOfProfile == "1drvriZljTSCXM7qSFyJHCLqENE2" && Auth.auth().currentUser?.uid != self.uidOfProfile {
+                                        self.followingButton.setTitle("0", for: .normal)
+                                        self.followingButton.isUserInteractionEnabled = false
+                                    } else {
+                                        self.followingButton.setTitle("\(followingCount.roundedWithAbbreviations)", for: .normal)
+                                        self.followingButton.isUserInteractionEnabled = true
+                                    }
                                     //                    self.followingButton.titleLabel?.text = "\(followingCount)"
                                     self.followingButton.frame = CGRect(x: actualFollowingLabel.frame.minX, y: 0, width: self.actualFollowingLabel.frame.width, height: 25)
                                     self.followingButton.center.x = self.actualFollowingLabel.center.x
@@ -1393,7 +1568,7 @@ extension UILabel {
 
         // (Swift 4.1 and 4.0) Line spacing attribute
         attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value:paragraphStyle, range:NSMakeRange(0, attributedString.length))
-        attributedString.setFontFace(font: UIFont(name: "\(Constants.globalFont)", size: 13)!, color: .black)
+        attributedString.setFontFace(font: UIFont(name: "\(Constants.globalFont)", size: 12)!, color: .black)
         
         self.attributedText = attributedString
     }

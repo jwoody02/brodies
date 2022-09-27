@@ -14,6 +14,14 @@ import FirebaseAuth
 import SPAlert
 import FirebaseAnalytics
 import Kingfisher
+import DPTagTextView
+import ActiveLabel
+
+extension String {
+  mutating func insert(string:String,ind:Int) {
+    self.insert(contentsOf: string, at:self.index(self.startIndex, offsetBy: ind) )
+  }
+}
 class CommentReply: Equatable {
     var commentText: String
     var username: String
@@ -59,7 +67,10 @@ extension CommentSectionPopup: TableViewCellDelegate {
 //            copyView.frame = absoluteRec
             copyView.frame = CGRect(x: cell.contentView.frame.minX, y: absoluteRec.minY + cell.contentView.frame.minY, width: cell.contentView.frame.width, height: cell.contentView.frame.height)
             OGCopyViewRect = copyView.frame
+            
             self.styleCopyView(actualComment: comments[cell.index])
+            flagButton.tintColor = .darkGray
+            flagButton.setImage(UIImage(systemName: "arrowshape.turn.up.forward")?.applyingSymbolConfiguration(.init(pointSize: 10, weight: .medium, scale: .medium))?.image(withTintColor: .darkGray), for: .normal)
             self.heartButton.setImage(cell.heartButton.image(for: .normal), for: .normal)
             self.heartButton.tintColor = cell.heartButton.tintColor
             self.profilePicImage.image = cell.profilePicImage.image
@@ -67,6 +78,9 @@ extension CommentSectionPopup: TableViewCellDelegate {
             hasReachedEndOfReplies = false
             copyView.isUserInteractionEnabled = true
             commentTextField.placeholder = "Reply to \(cell.actualComment.authorUserName)'s comment"
+            if self.commentTextView.text == "Comment on \(self.actualPost.username)'s post" {
+                self.commentTextView.text = "Reply to \(cell.actualComment.authorUserName)'s comment"
+            }
             tappedComment = cell.actualComment
             repliesTableView.isHidden = true
             // repliesTableView.frame = CGRect(x: copyView.frame.minX, y: copyView.frame.maxY, width: copyView.frame.width, height: )
@@ -96,7 +110,12 @@ extension CommentSectionPopup: TableViewCellDelegate {
     }
     
     @objc func copyViewTapp() {
+        let tmp = tappedComment?.authorUserName
         tappedComment = nil
+        usernameButton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 13)
+        actualCommentLabel.font = UIFont(name: Constants.globalFont, size: 12)
+        likesCountLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        commentCountLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
         UIView.animate(withDuration: 0.25, delay: 0.0, options: [], animations: {
             self.commentsTableView.alpha = 1
             self.copyView.frame = self.OGCopyViewRect ?? CGRect(x: 0, y: 0, width: 0, height: 0)
@@ -104,6 +123,9 @@ extension CommentSectionPopup: TableViewCellDelegate {
             self.commentsLabel.text = "\(self.actualPost.commentCount) Comments"
             self.commentTextField.placeholder = "Comment on \(self.actualPost.username)'s post"
             self.commentTextField.text = ""
+            if self.commentTextView.text == "Reply to \(tmp)'s comment" {
+                self.commentTextView.text = "Comment on \(self.actualPost.username)'s post"
+            }
             self.tappedComment = nil
             self.repliesTableView.alpha = 0
             self.replies.removeAll()
@@ -118,7 +140,9 @@ extension CommentSectionPopup: TableViewCellDelegate {
             self.commentsTableView.alpha = 1
             self.copyView.frame = self.OGCopyViewRect ?? CGRect(x: 0, y: 0, width: 0, height: 0)
             self.arrowImage.image = UIImage(systemName: "chevron.right")
-            
+            if self.commentTextView.text == "Reply to \(self.tappedComment?.authorUserName)'s comment" {
+                self.commentTextView.text = "Comment on \(self.actualPost.username)'s post"
+            }
         } , completion: { (finished: Bool) in
             self.copyView.isHidden = true
         })
@@ -181,6 +205,19 @@ extension CommentSectionPopup: TableViewCellDelegate {
                                 mainDispatch.notify(queue: .main) {
                                     print("* fetched \(self.replies.count) replies")
                                     self.replies = self.replies.removeDuplicates() // remove duplicate comments
+                                    self.replies = self.replies.sorted(by: {(obj1, obj2) -> Bool in
+                                        if let im1 = obj1 as? CommentReply {
+                                            if let im2 = obj2 as? CommentReply {
+                                                return im1.timestamp < im2.timestamp
+                                            } else {
+                                                print("* found ad while sorting, returning false")
+                                                return false
+                                            }
+                                        } else {
+                                            print("* found ad while sorting, returning false")
+                                            return false
+                                        }
+                                    })
                                     self.repliesTableView.reloadData()
                                     if self.hasDoneInitialReplyFetch == false {
                                         self.repliesTableView.fadeIn()
@@ -229,6 +266,19 @@ extension CommentSectionPopup: TableViewCellDelegate {
                             }
                             mainDispatch.notify(queue: .main) {
                                 print("* fetched \(self.replies.count) replies")
+                                self.replies = self.replies.sorted(by: {(obj1, obj2) -> Bool in
+                                    if let im1 = obj1 as? CommentReply {
+                                        if let im2 = obj2 as? CommentReply {
+                                            return im1.timestamp < im2.timestamp
+                                        } else {
+                                            print("* found ad while sorting, returning false")
+                                            return false
+                                        }
+                                    } else {
+                                        print("* found ad while sorting, returning false")
+                                        return false
+                                    }
+                                })
                                 self.replies = self.replies.removeDuplicates() // remove duplicate comments
                                 self.repliesTableView.reloadData()
                                 if self.hasDoneInitialReplyFetch == false {
@@ -261,8 +311,9 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
     @IBOutlet weak var copyView: UIView!
     @IBOutlet weak var profilePicImage: UIImageView!
     @IBOutlet weak var usernameButton: UIButton!
+    @IBOutlet weak var brodieBanner: UIImageView!
     
-    @IBOutlet weak var actualCommentLabel: VerticalAlignLabel!
+    @IBOutlet weak var actualCommentLabel: ActiveLabel!
     @IBOutlet weak var timeSincePostedLabel: UILabel!
     @IBOutlet weak var arrowImage: UIImageView!
     
@@ -273,52 +324,116 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
     @IBOutlet weak var commentCountLabel: UILabel!
     
     @IBOutlet weak var flagButton: UIButton!
+    @IBOutlet weak var commentTextView: DPTagTextView!
+    
     var tappedComment: commentStruct? = nil
     var OGCopyViewRect: CGRect?
     var replies = [CommentReply]()
+    var searchResults: [User] = []
     
     var repliesQuery: Query!
     var repliesDocuments = [QueryDocumentSnapshot]()
     var hasReachedEndOfReplies = false
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return emojiList?.count ?? 0
+        if collectionView == emojiCollectionView {
+            return emojiList?.count ?? 0
+        } else {
+            return searchResults.count
+        }
+        
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "emojicell", for: indexPath) as! EmojiHolderCell
-        cell.styleCell()
-        cell.emojiLabel.text = emojiList?[indexPath.row] ?? ""
-        return cell
+        if collectionView == emojiCollectionView {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "emojicell", for: indexPath) as! EmojiHolderCell
+            cell.styleCell()
+            cell.emojiLabel.text = emojiList?[indexPath.row] ?? ""
+            return cell
+        } else {
+            // AtSearchCell
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "AtSearchCell", for: indexPath) as! AtSearchForUserCell
+            cell.result = searchResults[indexPath.row]
+            cell.styleCell()
+            return cell
+        }
+        
     }
     func collectionView(_ collectionView: UICollectionView,
                         layout collectionViewLayout: UICollectionViewLayout,
                         sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: 30, height: 30)
+        if collectionView == emojiCollectionView {
+            return CGSize(width: 30, height: 30)
+        } else {
+            let fnt = UIFont(name: Constants.globalFontBold, size: 11)!
+            let sizeThatFitsTextView = searchResults[indexPath.row].fullname.width(withConstrainedHeight: 16, font: fnt)
+            let font2 = UIFont(name: "\(Constants.globalFont)", size: 11)!
+            let secondSize = searchResults[indexPath.row].username.width(withConstrainedHeight: 15, font: font2)
+            if sizeThatFitsTextView > secondSize {
+                return CGSize(width: sizeThatFitsTextView + 5 + 10 + 50, height: 50)
+            } else {
+                return CGSize(width: secondSize + 10 + 10 + 50 + 5, height: 50)
+            }
+            
+        }
     }
     
     func collectionView(_ collectionView: UICollectionView,
                         layout collectionViewLayout: UICollectionViewLayout,
                         minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
-        return 10.0
+        if collectionView == emojiCollectionView {
+            return 10.0
+        } else {
+            return 0
+        }
     }
     
     func collectionView(_ collectionView: UICollectionView, layout
                         collectionViewLayout: UICollectionViewLayout,
                         minimumLineSpacingForSectionAt section: Int) -> CGFloat {
-        return 10.0
+        if collectionView == emojiCollectionView {
+            return 10.0
+        } else {
+            return 0
+        }
     }
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let generator = UIImpactFeedbackGenerator(style: .soft)
             generator.impactOccurred()
-        postButton.isUserInteractionEnabled = true
-        postButton.alpha = 1
-        self.commentTextField.text! += emojiList?[indexPath.row] ?? ""
+        if collectionView == emojiCollectionView {
+            
+            postButton.isUserInteractionEnabled = true
+            postButton.alpha = 1
+            if self.commentTextView.textColor == UIColor.lightGray {
+                commentTextView.textColor = UIColor.black
+                self.commentTextView.text = emojiList?[indexPath.row] ?? ""
+            } else {
+                self.commentTextView.text += emojiList?[indexPath.row] ?? ""
+            }
+            
+        } else {
+            if indexPath.row <= searchResults.count - 1 {
+                let usrname = searchResults[indexPath.row].username
+                print("* filling in \(usrname)")
+                self.searchResultsCollectionView.fadeOut()
+    //            if let index = commentTextView.text.index(of: "@\(currentSearchString)") {
+    //                print("* got index for @\(currentSearchString): \(index)")
+    //
+    //            }
+                self.commentTextView.text = self.commentTextView.text.replacingOccurrences(of: "@\(currentSearchString)", with: "@\(usrname) ")
+                currentSearchString = ""
+                searchResults.removeAll()
+                searchResultsCollectionView.reloadData()
+            }
+            
+        }
+        
+        
     }
-    
     @IBOutlet weak var commentsTableView: UITableView!
     @IBOutlet weak var repliesTableView: UITableView!
     @IBOutlet weak var emojiCollectionView: UICollectionView!
+    @IBOutlet weak var searchResultsCollectionView: UICollectionView!
     @IBOutlet weak var closeButton: UIButton!
     @IBOutlet weak var commentsLabel: UILabel!
     @IBOutlet weak var gradientView: UIView!
@@ -329,9 +444,14 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
     
     @IBOutlet weak var dimmedView: UIButton!
     
+    @IBOutlet weak var noCommentsLabel: UILabel!
+    
     private var db = Firestore.firestore()
     var query: Query!
     var documents = [QueryDocumentSnapshot]()
+    
+    var currentSearchString = ""
+    var parentVC: UIViewController?
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if tableView == commentsTableView {
@@ -346,7 +466,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
             let cell = tableView.dequeueReusableCell(withIdentifier: "newCommentCell", for: indexPath) as! CommentSectionTableViewCell
             cell.selectionStyle = .none
             cell.delegate = self
-            let comment = comments[indexPath.row]
+            var comment = comments[indexPath.row]
             cell.actualComment = comment
             cell.commentID = comment.commentID
             cell.originalPostAuthorID = originalPostAuthorID
@@ -369,6 +489,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
             cell.selectionStyle = .none
             let reply = replies[indexPath.row]
             cell.originalPostID = actualPost.postID
+            cell.parentVC = self
             cell.originalPostAuthorID = actualPost.userID
             if let tappedComment = tappedComment {
                 cell.actualComment = tappedComment
@@ -406,20 +527,21 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
     }
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         if tableView == commentsTableView {
-            let expectedLabelHeight = comments[indexPath.row].commentText.height(withConstrainedWidth: UIScreen.main.bounds.width - 15 - 40 - 10 - 25, font: UIFont(name: Constants.globalFont, size: 14)!)
+            let wid = UIScreen.main.bounds.width - 20 - 45 - 35 - 45 - 15
+            let expectedLabelHeight = comments[indexPath.row].commentText.height(withConstrainedWidth: wid, font: UIFont(name: Constants.globalFont, size: 12)!)
             print("* [\(indexPath.row)] calculated expected height \(expectedLabelHeight)")
             var calculatedHeight = expectedLabelHeight + 50 + 30 + 20
             if expectedLabelHeight > 40 {
-                calculatedHeight += 10
+//                calculatedHeight += 10
             }
             calculatedHeight -= 10
             calculatedHeight -= 5
             print("* [\(indexPath.row)] final height \(calculatedHeight)")
             return calculatedHeight ?? 120
         } else {
-            var expectedLabelHeight = replies[indexPath.row].replyText.height(withConstrainedWidth: self.repliesTableView.frame.width - 10 - 80, font: UIFont(name: Constants.globalFont, size: 14)!)
-            expectedLabelHeight += 15
-            return 40 + expectedLabelHeight
+            var expectedLabelHeight = replies[indexPath.row].replyText.height(withConstrainedWidth: self.repliesTableView.frame.width - 10 - 80, font: UIFont(name: Constants.globalFont, size: 13)!)
+//            expectedLabelHeight += 15
+            return 35 + expectedLabelHeight
         }
         
     }
@@ -428,12 +550,25 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
         if tableView == repliesTableView {
                         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
-            if commentTextField.text == "" {
-                commentTextField.text = "@\(replies[indexPath.row].authorUserName)"
+//            if commentTextField.text == "" {
+//                commentTextField.text = "@\(replies[indexPath.row].authorUserName) "
+//            } else {
+//                commentTextField.text = "\(commentTextField.text ?? "") @\(replies[indexPath.row].authorUserName) "
+//            }
+//            commentTextField.becomeFirstResponder()
+//            if commentTextView.text == "" {
+//                commentTextView.text = "@\(replies[indexPath.row].authorUserName) "
+//            } else {
+//                commentTextView.text = "\(commentTextView.text ?? "") @\(replies[indexPath.row].authorUserName) "
+//            }
+            if self.commentTextView.textColor == UIColor.lightGray {
+                commentTextView.textColor = UIColor.black
+                commentTextView.text = "@\(replies[indexPath.row].authorUserName) "
             } else {
-                commentTextField.text = "\(commentTextField.text ?? "") @\(replies[indexPath.row].authorUserName)"
+                commentTextView.text = "\(commentTextView.text ?? "") @\(replies[indexPath.row].authorUserName) "
             }
-            commentTextField.becomeFirstResponder()
+            commentTextView.becomeFirstResponder()
+            
         } else if tableView == commentsTableView {
             let cell = tableView.cellForRow(at: indexPath)
             if let cell = cell as? CommentSectionTableViewCell {
@@ -447,6 +582,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
     var comments: [commentStruct] = []
     
     var originalBottomY = 0
+    var keyboardOriginY = 0
     var originalPostID = ""
     var originalPostAuthorID = ""
     
@@ -480,6 +616,12 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
         commentsTableView.showsVerticalScrollIndicator = false
         emojiCollectionView.showsHorizontalScrollIndicator = false
         commentsTableView.alwaysBounceVertical = false
+        
+        searchResultsCollectionView.dataSource = self
+        searchResultsCollectionView.delegate = self
+        searchResultsCollectionView.layer.cornerRadius = 8
+        searchResultsCollectionView.clipsToBounds = true
+        searchResultsCollectionView.showsHorizontalScrollIndicator = false
 //        commentsTableView.bounces = false
         styleUI()
         
@@ -563,25 +705,62 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
             self.currentUserUsername = currentuserVals?["username"] as? String ?? ""
             self.currentUserProfilePic = currentuserVals?["profileImageURL"] as? String ?? ""
         }
+        styleActiveLabel()
+    }
+    func styleActiveLabel() {
+        actualCommentLabel.enabledTypes = [.mention, .hashtag, .url]
+        actualCommentLabel.customize { label in
+            label.hashtagColor = Constants.primaryColor.hexToUiColor().withAlphaComponent(0.7)
+            label.mentionColor = Constants.primaryColor.hexToUiColor()
+            label.URLColor = Constants.primaryColor.hexToUiColor()
+            label.handleMentionTap { userHandle in
+                print("* opening profile for user: @\(userHandle)")
+                let userLocalRef = self.db.collection("user-locations").whereField("username", isEqualTo: userHandle.lowercased()).limit(to: 1)
+                userLocalRef.getDocuments() { (querySnapshot, err) in
+                    if let err = err {
+                        print("Error getting documents: \(err)")
+                    } else {
+                        if querySnapshot?.count != 0 {
+                            print("* got user doc: \(querySnapshot?.documents[0].documentID)")
+                            self.openProfileForUser(withUID: (querySnapshot?.documents[0].documentID)!)
+                        }
+                    }
+                }
+            }
+//            label.handleHashtagTap { self.alert("Hashtag", message: $0) }
+            label.handleURLTap { url in
+                print("* opening url: \(url)")
+                if #available(iOS 10.0, *) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                } else {
+                    UIApplication.shared.openURL(url)
+                }
+            }
+        }
+    }
+    func openProfileForUser(withUID: String) {
+        if let parentV = parentVC as? FeedViewController {
+            if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "MyProfileViewController") as? MyProfileViewController {
+                vc.uidOfProfile = withUID
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                parentV.navigationController?.pushViewController(vc, animated: true)
+
+            }
+            
+        }
+        
     }
     // textfield delegate for change text
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if textField == commentTextField {
-            if string == "" {
-                if textField.text?.count == 1 {
-                     postButton.isUserInteractionEnabled = false
-                    postButton.alpha = 0.5
-                }
+            if commentTextField.text == "" {
+                postButton.isUserInteractionEnabled = false
+               postButton.alpha = 0.5
             } else {
                 postButton.isUserInteractionEnabled = true
                 postButton.alpha = 1
-                // check if current location where editing is within the @ symbol
-                let currentLocation = textField.offset(from: textField.beginningOfDocument, to: textField.selectedTextRange!.start)
-                let text: NSString = textField.text as? NSString ?? ""
-                let textBeforeCursor = text.substring(to: currentLocation)
-                let textAfterCursor = text.substring(from: currentLocation)
-//                print("* before: \(textBeforeCursor), after: \(textAfterCursor)")
-                
+
 
             }
         }
@@ -617,7 +796,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
         
         commentsLabel.text = "\(actualPost.commentCount.delimiter) Comments"
         commentsLabel.frame = CGRect(x: 0, y: 20, width: UIScreen.main.bounds.width, height: 25)
-        commentsLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+        commentsLabel.font = UIFont(name: Constants.globalFontBold, size: 13)
         commentsLabel.textColor = .darkGray
         commentsLabel.textAlignment = .center
         
@@ -661,10 +840,40 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
     }
     func styleCommentStuff() {
         emojiCollectionView.frame = CGRect(x: 20, y: 10, width: UIScreen.main.bounds.width - 40, height: 30)
+        searchResultsCollectionView.frame = CGRect(x: 20, y: 0, width: UIScreen.main.bounds.width - 40, height: 50)
         emojiCollectionView.delegate = self
         emojiCollectionView.dataSource = self
         
         commentTextField.placeholder = "Comment on \(actualPost.username)'s post" // OR "Reply to username's comment" for comment replies
+        commentTextView.setText("Comment on \(actualPost.username)'s post", arrTags: [])
+        commentTextView.isUserInteractionEnabled = true
+//        commentTextView.delegate = self
+        commentTextView.textColor = UIColor.lightGray
+        commentTextView.styleTextView()
+        commentTextView.textContainer.maximumNumberOfLines = 6
+        commentTextView.addCommentViewPadding()
+        commentTextView.frame = CGRect(x: 15, y: 50, width: UIScreen.main.bounds.width - 30, height: 50)
+        commentTextView.dpTagDelegate = self // set DPTagTextViewDelegate Delegate
+//        commentTextView.setTagDetection(true) // true :- detecte tag on tap , false :- Search Tags using mentionSymbol & hashTagSymbol.
+        commentTextView.mentionSymbol = "@" // Search start with this mentionSymbol.
+        commentTextView.hashTagSymbol = "#" // Search start with this hashTagSymbol for hashtagging.
+        commentTextView.allowsHashTagUsingSpace = true // Add HashTag using space
+        
+        let font = UIFont(name: "\(Constants.globalFont)", size: 13)
+//        commentTextView.font = font
+        commentTextView.textViewAttributes = [NSAttributedString.Key.foregroundColor: UIColor.black,
+                                              NSAttributedString.Key.font: font!] // set textview defult text Attributes
+        commentTextView.mentionTagTextAttributes = [NSAttributedString.Key.foregroundColor: Constants.primaryColor.hexToUiColor(),
+                                                    NSAttributedString.Key.backgroundColor: UIColor.clear,
+                                                    NSAttributedString.Key.font: font!] // set textview mentionTag text Attributes
+        commentTextView.hashTagTextAttributes = [NSAttributedString.Key.foregroundColor: Constants.primaryColor.hexToUiColor(),
+        NSAttributedString.Key.backgroundColor: UIColor.clear,
+                                                 NSAttributedString.Key.font: font!] // set textview hashTag text Attributes
+        commentTextView.backgroundColor = Constants.backgroundColor.hexToUiColor()
+        commentTextView.contentMode = .left
+        
+        
+        commentTextField.isHidden = true
         commentTextField.styleSearchBar()
         commentTextField.backgroundColor = Constants.backgroundColor.hexToUiColor()
         commentTextField.frame = CGRect(x: 15, y: 50, width: UIScreen.main.bounds.width - 30, height: 50)
@@ -682,7 +891,63 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
         postButton.tintColor = Constants.primaryColor.hexToUiColor()
         postButton.layer.cornerRadius = 12
     }
-    
+    func search(keyword: String) {
+        print("Searching for keyword \(keyword)")
+        let usersRef = db.collection("user-locations")
+        searchResults.removeAll()
+//        documents.removeAll()
+        searchResultsCollectionView.reloadData()
+        let userID = Auth.auth().currentUser?.uid
+        let end = "\(keyword.dropLast())\(nextChar(str: "\(keyword.last!)"))"
+        usersRef.whereField("username", isGreaterThanOrEqualTo: keyword.lowercased()).whereField("username", isLessThan: end).limit(to: 6).getDocuments() { (querySnapshot, err) in
+            if let err = err {
+                print("Error getting documents: \(err)")
+            } else {
+                
+                if querySnapshot!.isEmpty {
+                    print("* detected empty feed")
+                } else {
+                    let mainPostDispatchQueue = DispatchGroup()
+                    for document in querySnapshot!.documents {
+//                        self.documents += [document]
+                        print("* got user search results: \(document.documentID) => \(document.data())")
+                        let postVals = document.data() as? [String: Any]
+                        let userUID = postVals?["uid"] as? String ?? ""
+                        let username = postVals?["username"] as? String ?? ""
+                        let profileImageUrl = postVals?["profileImageURL"] as? String ?? ""
+                        let full_name = postVals?["full_name"] as? String ?? ""
+                        var locationString = "No location"
+                        if postVals?["city"] != nil {
+                            if postVals?["state"] != nil {
+                                locationString = "\(postVals?["city"] as! String), \(postVals?["state"] as! String)"
+                            }
+                        }
+                        var userResult = User(uid: userUID, username: username, profileImageUrl: profileImageUrl, bio: "", followingCount: 0, followersCount: 0, postsCount: 0, fullname: full_name, hasValidStory: false, isFollowing: false)
+                        userResult.location = locationString
+                        self.searchResults.append(userResult)
+                        
+                    }
+                    self.searchResults = self.searchResults.removeDuplicates()
+                    print("* dispatch queue notified, refreshing")
+                    self.searchResultsCollectionView.reloadData()
+                }
+                
+            }
+        }
+    }
+    func nextChar(str:String) -> String {
+        var ret = ""
+        if let firstChar = str.unicodeScalars.first {
+            let nextUnicode = firstChar.value + 1
+            if let var4 = UnicodeScalar(nextUnicode) {
+                var nextString = ""
+                nextString.append(Character(UnicodeScalar(var4)))
+                print(nextString)
+                ret = nextString
+            }
+        }
+        return ret
+    }
     @IBAction func dimmedViewTapped(_ sender: Any) {
         print("* dimmed view tapped")
         self.dismissKeyboard()
@@ -693,10 +958,11 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
         generator.impactOccurred()
         let postsRef = db.collection("posts")
         let timestamp = NSDate().timeIntervalSince1970
+        postButton.isUserInteractionEnabled = false
         //        let value: Double = 1
         //        let incr = FieldValue.increment(value)
         //        postsRef.document(originalPostAuthorID).collection("posts").document(originalPostID).updateData(["comments_count":incr])
-        if ((commentTextField.placeholder?.contains("Reply")) != nil && (commentTextField.placeholder?.contains("Reply") == true)) {
+        if let tp = tappedComment {
             let replyRef = postsRef.document(actualPost.userID).collection("posts").document(actualPost.postID).collection("comments").document(tappedComment!.commentID).collection("comment_replies").document()
             let submitData: [String: Any] = [
                 "commentText":tappedComment?.commentText as? String ?? "",
@@ -708,7 +974,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
                 "replyID": replyRef.documentID,
                 "authorUserName": currentUserUsername,
                 "authorProfilePic": currentUserProfilePic,
-                "replyText": commentTextField.text as? String ?? "",
+                "replyText": commentTextView.text as? String ?? "",
                 "likes_count": 0
             ]
             Analytics.logEvent("comment_reply_made", parameters: nil)
@@ -720,8 +986,16 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
                     self.repliesTableView.beginUpdates()
                     self.repliesTableView.insertRows(at: [IndexPath(row: 0, section: 0)], with: .automatic)
                     self.repliesTableView.endUpdates()
-                    self.commentTextField.text = ""
+//                    self.commentTextView.text = ""
+                    if let tp = self.tappedComment {
+                        self.commentTextView.text = "Reply to \(tp.authorUserName)'s comment"
+                    } else {
+                        self.commentTextView.text = "Comment on \(self.actualPost.username)'s post"
+                    }
+                    self.commentTextView.frame = CGRect(x: 15, y: 50, width: UIScreen.main.bounds.width - 30, height: 50)
+                    self.commentTextView.textColor = .lightGray
                     self.dismissKeyboard()
+                    self.postButton.isUserInteractionEnabled = true
                 }
             }
         } else {
@@ -740,7 +1014,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
             commentRef.setData([
                 "uid": "\(commentRef.documentID)",
                 "authorID": "\(userID)",
-                "commentText": "\(commentTextField.text ?? "")",
+                "commentText": "\(commentTextView.text ?? "")",
                 "createdAt": Int(timestamp),
                 "authorProfilePic": "\(self.currentUserProfilePic)",
                 "authorUserName": "\(self.currentUserUsername)",
@@ -749,11 +1023,12 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
             ], merge: true) { err in
                 if err == nil {
                     print("* successfully commented on post")
+                    self.postButton.isUserInteractionEnabled = true
                     self.dismissKeyboard()
                     var newComment = commentStruct()
                     newComment.authorID = userID
                     newComment.commentID = commentRef.documentID
-                    newComment.commentText = "\(self.commentTextField.text ?? "")"
+                    newComment.commentText = "\(self.commentTextView.text ?? "")"
                     newComment.createdAt = Double(Int(timestamp))
                     newComment.authorProfilePic = "\(self.currentUserProfilePic)"
                     newComment.authorUserName = "\(self.currentUserUsername)"
@@ -761,6 +1036,13 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
                     newComment.numberOfLikes = 0
                     
                     self.commentTextField.text = ""
+                    if let tp = self.tappedComment {
+                        self.commentTextView.text = "Reply to \(tp.authorUserName)'s comment"
+                    } else {
+                        self.commentTextView.text = "Comment on \(self.actualPost.username)'s post"
+                    }
+                    self.commentTextView.frame = CGRect(x: 15, y: 50, width: UIScreen.main.bounds.width - 30, height: 50)
+                    self.commentTextView.textColor = .lightGray
                     self.comments.insert(newComment, at: 0)
                     self.commentsTableView.beginUpdates()
                     self.commentsTableView.insertRows(at: [IndexPath(row: 0, section: 0)], with: .automatic)
@@ -773,6 +1055,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
                     //                let value: Double = -1
                     //                let incr = FieldValue.increment(value)
                     //                postsRef.document(self.originalPostAuthorID).collection("posts").document(self.originalPostID).updateData(["comments_count":incr])
+                    self.postButton.isUserInteractionEnabled = true
                 }
                 
                 
@@ -874,6 +1157,7 @@ class CommentSectionPopup: UIViewController, UITableViewDelegate, UITableViewDat
         
         // move the root view up by the distance of keyboard height
         self.bottomWhiteView.frame.origin.y = CGFloat(originalBottomY) - keyboardSize.height
+        self.keyboardOriginY = Int(CGFloat(originalBottomY) - keyboardSize.height)
         dimmedView.fadeIn()
     }
     
@@ -1050,5 +1334,136 @@ extension String {
         if self.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return [] }
         let separateList: [String] = componentSeparate(by: by).map {"\($0)\(by)"}.filter {$0 != "-"}
         return separateList
+    }
+}
+extension CommentSectionPopup : DPTagTextViewDelegate {
+    func dpTagTextView(_ textView: DPTagTextView, didChangedTagSearchString strSearch: String, isHashTag: Bool) {
+        print("* did change search string: \(strSearch)")
+        currentSearchString = strSearch
+        if isHashTag == false && strSearch != "" {
+            self.search(keyword: strSearch)
+            if searchResultsCollectionView.isHidden == true || searchResultsCollectionView.alpha == 0 {
+                self.searchResultsCollectionView.fadeIn()
+            }
+            
+        } else {
+            currentSearchString = ""
+            searchResults.removeAll()
+            searchResultsCollectionView.reloadData()
+            self.searchResultsCollectionView.fadeOut()
+        }
+    }
+    func dpTagTextView(_ textView: DPTagTextView, didInsertTag tag: DPTag) {
+        print("* did insert tag: \(tag)")
+    }
+    
+    func dpTagTextView(_ textView: DPTagTextView, didRemoveTag tag: DPTag) {
+        print("* did remove tag: \(tag)")
+    }
+    
+    func dpTagTextView(_ textView: DPTagTextView, didSelectTag tag: DPTag) {
+        print("* did select tag: \(tag)")
+    }
+    
+    func dpTagTextView(_ textView: DPTagTextView, didChangedTags arrTags: [DPTag]) {
+//        print("* did change tag: \(arrTags)")
+    }
+    func textViewDidBeginEditing(_ textView: DPTagTextView) {
+        if textView.textColor == UIColor.lightGray {
+            textView.text = nil
+            textView.textColor = UIColor.black
+        }
+    }
+    func textViewDidEndEditing(_ textView: DPTagTextView) {
+        if textView.text.isEmpty {
+            if let tp = tappedComment {
+                textView.text = "Reply to \(tp.authorUserName)'s comment"
+            } else {
+                textView.text = "Comment on \(actualPost.username)'s post"
+            }
+            
+            textView.textColor = UIColor.lightGray
+            postButton.isUserInteractionEnabled = false
+            postButton.alpha = 0.5
+        } else {
+            postButton.isUserInteractionEnabled = true
+           postButton.alpha = 1
+        }
+    }
+    func textViewDidChange(_ textView: DPTagTextView) {
+        print("* TEXT VIEW DID CHANGE: \(textView.text.isEmpty || textView.text.contains("@") == false)")
+        if textView.text.isEmpty || (textView.text.contains("@") == false && textView.text.isEmpty == false) {
+            print(" |_ empty : \(textView.text.isEmpty)")
+            if currentSearchString != "" {
+                self.searchResultsCollectionView.fadeOut()
+                currentSearchString = ""
+                searchResults.removeAll()
+                searchResultsCollectionView.reloadData()
+            }
+            if textView.text.isEmpty == false {
+                
+                if let tp = tappedComment {
+                    print(" |_ contains reply : \(textView.text == "Reply to \(tp.authorUserName)'s comment")")
+                    if textView.text == "Reply to \(tp.authorUserName)'s comment" {
+                        postButton.isUserInteractionEnabled = false
+                        postButton.alpha = 0.5
+                    } else {
+                        postButton.isUserInteractionEnabled = true
+                       postButton.alpha = 1
+                        updateTextViewHeight()
+                    }
+                } else {
+                    print(" |_ contains comment : \(textView.text == "Comment on \(actualPost.username)'s post")")
+                    if textView.text == "Comment on \(actualPost.username)'s post" {
+                        postButton.isUserInteractionEnabled = false
+                        postButton.alpha = 0.5
+                    } else {
+                        postButton.isUserInteractionEnabled = true
+                       postButton.alpha = 1
+                        updateTextViewHeight()
+                    }
+                }
+                            
+            } else {
+                postButton.isUserInteractionEnabled = false
+                postButton.alpha = 0.5
+            }
+        } else {
+            updateTextViewHeight()
+            postButton.isUserInteractionEnabled = true
+           postButton.alpha = 1
+//            print("* made new textview frame: \(textView.frame)")
+        }
+    }
+    func updateTextViewHeight() {
+        
+        // get estimated height of textview and change it accordingly + check for character length under 200
+        let fixedWidth = (UIScreen.main.bounds.width - 30 - 5)
+        let sizeThatFitsTextView = commentTextView.sizeThatFits(CGSize(width: fixedWidth, height: CGFloat(MAXFLOAT)))
+        let heightOfText = sizeThatFitsTextView.height
+        let offset = heightOfText - 50
+        if offset > 0 {
+            bottomWhiteView.frame = CGRect(x: 0, y: UIScreen.main.bounds.height - 150 - 110, width: UIScreen.main.bounds.width, height: 190 + offset)
+            self.bottomWhiteView.frame.origin.y = CGFloat(keyboardOriginY) - offset
+            
+//                originalBottomY -= offset
+        } else {
+            bottomWhiteView.frame = CGRect(x: 0, y: UIScreen.main.bounds.height - 150 - 110, width: UIScreen.main.bounds.width, height: 190)
+            self.bottomWhiteView.frame.origin.y = CGFloat(keyboardOriginY)
+        }
+        commentTextView.frame = CGRect(x: commentTextView.frame.minX, y: commentTextView.frame.minY, width: (UIScreen.main.bounds.width - 30), height: heightOfText)
+    }
+    func textView(_ textView: DPTagTextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        let newText = (textView.text as NSString).replacingCharacters(in: range, with: text)
+        let numberOfChars = newText.count
+        if newText.last == " " {
+            if currentSearchString != "" {
+                self.searchResultsCollectionView.fadeOut()
+                currentSearchString = ""
+                searchResults.removeAll()
+                searchResultsCollectionView.reloadData()
+            }
+        }
+        return numberOfChars < 169    // 170 Limit Value
     }
 }

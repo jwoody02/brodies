@@ -92,7 +92,8 @@ class SavedPostsViewController: UIViewController, UICollectionViewDelegate, UICo
         topWhiteView.layer.cornerRadius = Constants.borderRadius
         topWhiteView.clipsToBounds = true
         topWhiteView.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 90)
-        topLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+//        topLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+        topLabel.font = UIFont(name: Constants.globalFontBold, size: 16)
         topLabel.text = "\(collection?.publicname ?? "")"
         topLabel.sizeToFit()
         

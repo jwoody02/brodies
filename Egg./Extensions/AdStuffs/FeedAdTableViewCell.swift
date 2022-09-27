@@ -41,13 +41,13 @@ class FeedAdTableViewCell: UITableViewCell {
         }
         advertisernameLabel1.frame = CGRect(x: profilePicImage.frame.maxX + 10, y: profilePicImage.frame.minY, width: contentView.frame.width - profilePicImage.frame.maxY - 20, height: 16)
         advertisernameLabel1.text = usingAd.advertiser
-        advertisernameLabel1.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
+        advertisernameLabel1.font = UIFont(name: Constants.globalFontBold, size: 12)
         advertisernameLabel1.textColor = Constants.textColor.hexToUiColor()
         advertisernameLabel1.text = usingAd.headline ?? ""
         print("* using headline: \(usingAd.headline)")
         LilAdLabel.frame = CGRect(x: advertisernameLabel1.frame.minX, y: advertisernameLabel1.frame.maxY + 5, width: 25, height: 15)
         LilAdLabel.layer.cornerRadius = 4
-        LilAdLabel.font = UIFont(name: "\(Constants.globalFont)", size: 11)
+        LilAdLabel.font = UIFont(name: "\(Constants.globalFontMedium)", size: 10)
         
         LilAdLabel.textColor = Constants.primaryColor.hexToUiColor()
         LilAdLabel.backgroundColor = Constants.secondaryColor.hexToUiColor()
@@ -65,12 +65,13 @@ class FeedAdTableViewCell: UITableViewCell {
         mediaView.backgroundColor = .clear
         mediaView.frame = CGRect(x: 0, y: profilePicImage.frame.maxY + 8 , width: contentView.frame.width, height: contentView.frame.width)
         mediaView.mediaContent = usingAd.mediaContent
+        mediaView.isUserInteractionEnabled = true
         
         actionButton.frame = CGRect(x: 0, y: mediaView.frame.maxY, width: contentView.frame.width, height: 40)
         actionButton.backgroundColor = Constants.primaryColor.hexToUiColor()
         actionButton.tintColor = .white
         actionButton.setTitleColor(.white, for: .normal)
-        let fnt = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
+        let fnt = UIFont(name: Constants.globalFontBold, size: 12)
         actionButton.titleLabel?.font = fnt
         let hotAction = (usingAd.callToAction ?? "").lowercased().capitalizingFirstLetter() // "INSTALL" -> "Install"
         actionButton.setTitle(hotAction, for: .normal)
@@ -85,7 +86,7 @@ class FeedAdTableViewCell: UITableViewCell {
         
 //        advertisernameLabel2.text = usingAd.advertiser
 //        advertisernameLabel2.backgroundColor = Constants.backgroundColor.hexToUiColor()
-        let captionFont = UIFont(name: "\(Constants.globalFont)", size: 14)
+        let captionFont = UIFont(name: "\(Constants.globalFont)", size: 13)
         captionLabel.text = usingAd.body ?? ""
         print("* ad body: \(usingAd.body ?? "")")
         captionLabel.frame = CGRect(x: 15, y: actionButton.frame.maxY + 10, width: contentView.frame.width - 30, height: contentView.frame.height - self.actionButton.frame.maxY - 10 - 5)
@@ -96,6 +97,23 @@ class FeedAdTableViewCell: UITableViewCell {
         actionButton.isHidden = usingAd.callToAction == nil
         
         setLocalShit()
+        
+//        if let icon = usingAd.icon {
+//            icon.image?.getColors { colors in
+//                self.actionButton.backgroundColor = colors?.background
+//                self.actionButton.tintColor = colors?.primary
+//                self.actionButton.setTitleColor(colors?.primary, for: .normal)
+//                if ((colors?.primary.isLight()) != nil) && (colors?.primary.isLight()) == true {
+//                    self.actionButton.setTitleColor(.black, for: .normal)
+//                } else {
+//                    self.actionButton.setTitleColor(.white, for: .normal)
+//                }
+//                
+//                self.LilAdLabel.backgroundColor = colors?.primary
+//                self.LilAdLabel.textColor = colors?.background
+//            }
+//        }
+        
     }
     func setLocalShit() {
         nativeAdView.callToActionView = self.actionButton
@@ -116,5 +134,27 @@ extension String {
 
     mutating func capitalizeFirstLetter() {
       self = self.capitalizingFirstLetter()
+    }
+}
+extension UIColor {
+
+    // Check if the color is light or dark, as defined by the injected lightness threshold.
+    // Some people report that 0.7 is best. I suggest to find out for yourself.
+    // A nil value is returned if the lightness couldn't be determined.
+    func isLight(threshold: Float = 0.5) -> Bool? {
+        let originalCGColor = self.cgColor
+
+        // Now we need to convert it to the RGB colorspace. UIColor.white / UIColor.black are greyscale and not RGB.
+        // If you don't do this then you will crash when accessing components index 2 below when evaluating greyscale colors.
+        let RGBCGColor = originalCGColor.converted(to: CGColorSpaceCreateDeviceRGB(), intent: .defaultIntent, options: nil)
+        guard let components = RGBCGColor?.components else {
+            return nil
+        }
+        guard components.count >= 3 else {
+            return nil
+        }
+
+        let brightness = Float(((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000)
+        return (brightness > threshold)
     }
 }

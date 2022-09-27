@@ -66,7 +66,7 @@ class NotificationsPOpup: UIViewController {
         if let settingsLabel = self.settingsLabel {
             settingsLabel.text = "Push Notifications"
             settingsLabel.frame = CGRect(x: 0, y: 20, width: UIScreen.main.bounds.width, height: 25)
-            settingsLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+            settingsLabel.font = UIFont(name: "HelveticaNeue-Bold", size: 16)
             settingsLabel.textColor = .darkGray
             settingsLabel.textAlignment = .center
             self.view.addSubview(settingsLabel)
@@ -85,7 +85,7 @@ class NotificationsPOpup: UIViewController {
                 allNotificationsLabel.text = "All Notifications"
                 allNotificationsLabel.isUserInteractionEnabled = false
                 allNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                allNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                allNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                 self.allNotificationsView?.addSubview(allNotificationsLabel)
             }
             let checkboxWid = 20
@@ -121,7 +121,7 @@ class NotificationsPOpup: UIViewController {
                     likesNotificationsLabel.text = "Likes"
                     likesNotificationsLabel.isUserInteractionEnabled = false
                     likesNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    likesNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    likesNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.likesNotificationsView?.addSubview(likesNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -146,7 +146,7 @@ class NotificationsPOpup: UIViewController {
                     commentsNotificationsLabel.text = "Comments"
                     commentsNotificationsLabel.isUserInteractionEnabled = false
                     commentsNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    commentsNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    commentsNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.commentsNotificationsView?.addSubview(commentsNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -171,7 +171,7 @@ class NotificationsPOpup: UIViewController {
                     followersNotificationsLabel.text = "New Followers"
                     followersNotificationsLabel.isUserInteractionEnabled = false
                     followersNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    followersNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    followersNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.followersNotificationsView?.addSubview(followersNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -196,7 +196,7 @@ class NotificationsPOpup: UIViewController {
                     mentionsNotificationsLabel.text = "Mentions"
                     mentionsNotificationsLabel.isUserInteractionEnabled = false
                     mentionsNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    mentionsNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    mentionsNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.mentionsNotificationsView?.addSubview(mentionsNotificationsLabel)
                 }
                 let checkboxWid = 20

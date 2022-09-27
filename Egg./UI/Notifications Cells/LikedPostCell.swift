@@ -32,6 +32,8 @@ class NewLikeCell: UITableViewCell {
     
     @IBOutlet weak var previewImage: UIImageView!
     
+    @IBOutlet weak var brodieBanner: UIImageView!
+    
     var parentViewController: NotificationsViewController?
     var index = 0
     
@@ -44,8 +46,8 @@ class NewLikeCell: UITableViewCell {
         let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        likedYourPostLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        likedYourPostLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
         
         let titleWidths = Int(Int(self.contentView.frame.width) - profXY - profWid - 10 - 30)
         usernameLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 25, width: titleWidths, height: 16)
@@ -88,6 +90,16 @@ class NewLikeCell: UITableViewCell {
         
         print("* profileHeight: \(profilePicButton.frame.width), preview iamge: \(self.previewImage.frame.width)")
         downloadPreview(with: result.postThumbnailURL)
+        if result.likeUserID == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+//            followButton.isHidden = true
+            usernameLabel.isHidden = true
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 24, width: 40, height: 18)
+            brodieBanner.isHidden = false
+            likedYourPostLabel.frame = CGRect(x: usernameLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        } else {
+            brodieBanner.isHidden = true
+            usernameLabel.isHidden = false
+        }
     }
     func styleCellFor(notification: LikedPostNotification, index: Int) {
         self.result = notification

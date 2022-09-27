@@ -42,7 +42,7 @@ class savedCollectionCell: UICollectionViewCell {
         previewImagesHolder.clipsToBounds = true
         
         collectionNameLabel.text = collection?.publicname
-        collectionNameLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+        collectionNameLabel.font = UIFont(name: Constants.globalFontMedium, size: 14)
         collectionNameLabel.numberOfLines = 1
         collectionNameLabel.textColor = UIColor.darkGray
         collectionNameLabel.frame = CGRect(x: prevImX + 5, y: Int(previewImagesHolder.frame.maxY) + 10, width: previewViewWidthHeight, height: 20)
@@ -73,7 +73,8 @@ class savedCollectionCell: UICollectionViewCell {
             
             numberOfPostsLabel.isHidden = false
             numberOfPostsLabel.textColor = .white
-            numberOfPostsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//            numberOfPostsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+            numberOfPostsLabel.font = UIFont(name: Constants.globalFontMedium, size: 14)
             numberOfPostsLabel.text = "\((collection?.numberOfPosts ?? 0).roundedWithAbbreviations)"
             numberOfPostsLabel.sizeToFit()
             let newPostWidth = numberOfPostsLabel.frame.width + 15
@@ -251,7 +252,8 @@ class SavedCollectionsViewController: UIViewController, UICollectionViewDelegate
         topWhiteView.layer.cornerRadius = Constants.borderRadius
         topWhiteView.clipsToBounds = true
         topWhiteView.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 90)
-        topLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+//        topLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+        topLabel.font = UIFont(name: Constants.globalFontBold, size: 16)
         topLabel.text = "Favorites"
         topLabel.sizeToFit()
         

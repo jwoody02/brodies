@@ -12,6 +12,7 @@ import FirebaseCore
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseAnalytics
+import FirebaseStorage
 
 class NotificationsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -60,6 +61,13 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
             cell.styleCellFor(notification: notification, index: indexPath.row)
             cell.selectionStyle = .none
             return cell
+        } else if let notification = noti as? mentionNotification {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "newmentionCell", for: indexPath) as! MentionNotifiationCell
+            print("* making new mention cell")
+            cell.parentViewController = self
+            cell.styleCellFor(notification: notification, index: indexPath.row)
+            cell.selectionStyle = .none
+            return cell
         } else {
             // later put this in else statement
             let notification = noti as! CommentMadeNotification
@@ -87,32 +95,43 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
             if let notif = noti as? CommentMadeNotification {
                 let profWid = 48
                 let profXY = Int(16)
-                let titleWidths = Int(Int(UIScreen.main.bounds.width - 30) - profXY - profWid - 30 - 50)
-                let heightForComment = (notif.comment as? String ?? "").height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 13)!)
+                let titleWidths = Int(Int(UIScreen.main.bounds.width - 30) - profXY - profWid - 30 - 45)
+                let heightForComment = ("commented: \(notif.comment as? String ?? "")  \(notif.timeSince)").height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 12)!)
                 if heightForComment < 28 {
                     return 90
                 } else {
-                    return heightForComment + 50 + 30
+                    return heightForComment + 30 + 30
                 }
             } else if let notif = noti as? ReplyMadeNotification {
                 let profWid = 48
                 let profXY = Int(16)
-                let titleWidths = Int(Int(UIScreen.main.bounds.width - 30) - profXY - profWid - 30 - 50)
-                let heightForComment = (notif.reply as? String ?? "").height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 13)!)
-                if heightForComment < 28 {
+                let titleWidths = Int(Int(UIScreen.main.bounds.width - 30) - profXY - profWid - 30 - 45)
+                let heightForComment = ("replied: \"\(notif.reply)\"  \(notif.timeSince)").height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 12)!)
+                print("* REPLY DEBUG, height: \(heightForComment)")
+                if heightForComment < 18 {
                     return 90
                 } else {
-                    return heightForComment + 50 + 30
+                    return heightForComment + 50 + 20
                 }
             } else if let notif = noti as? likedReplyNotif {
                 let profWid = 48
                 let profXY = Int(16)
                 let titleWidths = Int(Int(UIScreen.main.bounds.width - 30) - profXY - profWid - 30 - 50)
-                let heightForComment = (notif.originalReply as? String ?? "").height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 13)!)
+                let heightForComment = 15
                 if heightForComment < 28 {
                     return 90
                 } else {
-                    return heightForComment + 50 + 30
+                    return CGFloat(heightForComment + 50 + 30)
+                }
+            } else if let notif = noti as? mentionNotification {
+                let profWid = 48
+                let profXY = Int(16)
+                let titleWidths = Int(Int(UIScreen.main.bounds.width - 30) - profXY - profWid - 30 - 50)
+                let heightForComment = 15
+                if heightForComment < 28 {
+                    return 90
+                } else {
+                    return CGFloat(heightForComment + 50 + 30)
                 }
             } else {
                 return 0
@@ -169,13 +188,14 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
             if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "PhotoPageConteiner") as? PhotoPageContainerViewController {
                 print("* presenting post")
                 vc.currentIndex = 0
-                vc.username = self.currentUsername
-                vc.hasValidStory = self.hasValidStory
-                vc.imageUrl = self.currentProfilePic
+                let imagePostz = notification.currentPost
+                vc.username = imagePostz!.username
+                vc.hasValidStory = imagePostz!.hasValidStory
+                vc.imageUrl = imagePostz!.userImageUrl
                 vc.shouldOpenCommentSection = true
                 vc.commentToOpen = notification.commentId
                 vc.isFollowing = false
-                let imagePostz = notification.currentPost
+                
                 vc.imagePosts = [imagePostz!] // only load in one post
                 vc.profileUID = userID
                 nav?.pushViewController(vc, animated: true)
@@ -185,13 +205,14 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
             if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "PhotoPageConteiner") as? PhotoPageContainerViewController {
                 print("* presenting post")
                 vc.currentIndex = 0
-                vc.username = self.currentUsername
-                vc.hasValidStory = self.hasValidStory
-                vc.imageUrl = self.currentProfilePic
+                let imagePostz = notification.currentPost
+                vc.username = imagePostz!.username
+                vc.hasValidStory = imagePostz!.hasValidStory
+                vc.imageUrl = imagePostz!.userImageUrl
                 vc.shouldOpenCommentSection = true
                 vc.commentToOpen = notification.commentId
                 vc.isFollowing = false
-                let imagePostz = notification.currentPost
+                
                 vc.imagePosts = [imagePostz!] // only load in one post
                 vc.profileUID = userID
                 vc.replyToOpen = notification.replyId
@@ -202,17 +223,73 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
             if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "PhotoPageConteiner") as? PhotoPageContainerViewController {
                 print("* presenting post")
                 vc.currentIndex = 0
-                vc.username = self.currentUsername
-                vc.hasValidStory = self.hasValidStory
-                vc.imageUrl = self.currentProfilePic
+                let imagePostz = notification.currentPost
+                vc.username = imagePostz!.username
+                vc.hasValidStory = imagePostz!.hasValidStory
+                vc.imageUrl = imagePostz!.userImageUrl
                 vc.shouldOpenCommentSection = true
                 vc.commentToOpen = notification.commentId
                 vc.isFollowing = false
-                let imagePostz = notification.currentPost
+                
                 vc.imagePosts = [imagePostz!] // only load in one post
                 vc.profileUID = userID
                 vc.replyToOpen = notification.replyId
                 nav?.pushViewController(vc, animated: true)
+            }
+        } else if let notification = self.notifications[indexPath.row] as? mentionNotification {
+            if(notification.mentionType == "reply") {
+                print("* grabbing highlight replu")
+                let nav = self.navigationController
+                if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "PhotoPageConteiner") as? PhotoPageContainerViewController {
+                    print("* presenting post/reply")
+                    
+                    let imagePostz = notification.currentPost
+                    vc.imagePosts = [imagePostz!] // only load in one post
+                    vc.currentIndex = 0
+                    vc.username = imagePostz!.username
+                    vc.hasValidStory = imagePostz!.hasValidStory
+                    vc.imageUrl = imagePostz!.userImageUrl
+                    vc.shouldOpenCommentSection = true
+                    vc.commentToOpen = notification.commentId
+                    vc.isFollowing = false
+                    vc.profileUID = userID
+                    vc.replyToOpen = notification.replyId
+                    nav?.pushViewController(vc, animated: true)
+                }
+            } else if notification.mentionType == "comment" {
+                let nav = self.navigationController
+                if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "PhotoPageConteiner") as? PhotoPageContainerViewController {
+                    print("* presenting post with highlight comment")
+                    vc.currentIndex = 0
+                    
+                    let imagePostz = notification.currentPost
+                    vc.username = imagePostz!.username
+                    vc.hasValidStory = imagePostz!.hasValidStory
+                    vc.imageUrl = imagePostz!.userImageUrl
+                    vc.shouldOpenCommentSection = true
+                    vc.commentToOpen = notification.commentId
+                    vc.isFollowing = false
+                    vc.imagePosts = [imagePostz!] // only load in one post
+                    vc.profileUID = userID
+                    nav?.pushViewController(vc, animated: true)
+                }
+            } else if notification.mentionType == "post" {
+                let nav = self.navigationController
+                if let vc = UIStoryboard.init(name: "Main", bundle: Bundle.main).instantiateViewController(withIdentifier: "PhotoPageConteiner") as? PhotoPageContainerViewController {
+                    print("* presenting post")
+                    let imagePostz = notification.currentPost
+                    vc.currentIndex = 0
+                    vc.username = imagePostz!.username
+                    vc.hasValidStory = imagePostz!.hasValidStory
+                    vc.imageUrl = imagePostz!.userImageUrl
+                    vc.shouldOpenCommentSection = true
+                    vc.commentToOpen = notification.commentId
+                    vc.isFollowing = false
+                    vc.shouldHideFollowbutton = true
+                    vc.imagePosts = [imagePostz!] // only load in one post
+                    vc.profileUID = imagePostz!.userID
+                    nav?.pushViewController(vc, animated: true)
+                }
             }
         }
     }
@@ -263,6 +340,11 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        reloadEverything()
+        
+    }
+    func reloadEverything() {
+        notifications.removeAll()
         self.view.backgroundColor = hexStringToUIColor(hex: Constants.backgroundColor)
         styleEverything()
         if Auth.auth().currentUser?.uid == nil {
@@ -333,12 +415,18 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
             query = db.collection("notifications").document(userID).collection("notifications").order(by: "timestamp", descending: true).limit(to: 10)
             handleMoreLoad()
         }
+        activityLabel.font = UIFont(name: Constants.globalFontBold, size: 17)
+        allNotificationsButton.titleLabel?.font =  UIFont(name: Constants.globalFontMedium, size: 13)
+        likesNotificationsButton.titleLabel?.font =  UIFont(name: Constants.globalFontMedium, size: 13)
+        commentsNotificationsButton.titleLabel?.font =  UIFont(name: Constants.globalFontMedium, size: 13)
+        followersNotificationsButton.titleLabel?.font =  UIFont(name: Constants.globalFontMedium, size: 13)
+        mentionsNotificationsButton.titleLabel?.font =  UIFont(name: Constants.globalFontMedium, size: 13)
+        
         usersTableView.delegate = self
         usersTableView.dataSource = self
         
         //        updatebasicInfo()
 //        attemptToGetSystemNotification()
-        
     }
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -584,6 +672,15 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
         followersNotificationsButton.styleForSelectednotification()
         resetAndGetNotifs()
     }
+    @IBAction func MentionsButtonPressed(_ sender: Any) {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        let userID = (Auth.auth().currentUser?.uid)!
+        query = db.collection("notifications").document(userID).collection("notifications").whereField("type", isEqualTo: "mentioned").order(by: "timestamp", descending: true).limit(to: 10)
+        styleAllForUnselected()
+        mentionsNotificationsButton.styleForSelectednotification()
+        resetAndGetNotifs()
+    }
     func styleEverything() {
         self.usersTableView.isHidden = false
         self.usersTableView.alpha = 1
@@ -702,6 +799,11 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
         post.tags = values["tags"] as? [String] ?? [""]
         post.createdAt = values["createdAt"] as? Double ?? Double(NSDate().timeIntervalSince1970)
         post.imageHash = values["imageHash"] as? String ?? ""
+        let images = values["images"] as? [String] ?? []
+        if images.count > 1 {
+            print("* multiple images detected")
+            post.multiImageUrls = images
+        }
         //        post.username = self.user.username
         post.storageRefForThumbnailImage = values["storage_ref"] as? String ?? ""
         return post
@@ -763,6 +865,16 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                             idToCheck = (docData)?["likeUserID"] as? String ?? ""
                         } else if notificationType == "requested_to_follow" {
                             idToCheck = (docData)?["following_user_id"] as? String ?? ""
+                        } else if notificationType == "mentioned" {
+                            if (docData)?["replyId"] as? String ?? "" != "" {
+                                print("* loading mention in reply")
+                                idToCheck = (docData)?["replyUserID"] as? String ?? ""
+                            } else if (docData)?["commentUserID"] as? String ?? "" != "" {
+                                print("* loading mention in comment")
+                                idToCheck = (docData)?["commentUserID"] as? String ?? ""
+                            } else {
+                                idToCheck = (docData)?["userId"] as? String ?? ""
+                            }
                         }
                         mainPostDispatchQueue.enter()
                         
@@ -845,7 +957,27 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     self.db.collection("posts").document(userID).collection("posts").document((docData)?["postId"] as! String).getDocument { (documentzz, err) in
                                         if let postVals = (documentzz?.data() as? [String: AnyObject]) {
                                             let post = self.getImagePostFrom(values: postVals, postID: (docData)?["postId"] as! String)
+                                            if post.thumbNailImageURL == "" {
+                                                print("* EMPTY THUMBNAIL, UPDATING")
+                                                print("* failure, pushing new photo")
+                                                let storageRef = Storage.storage().reference().child("/post_thumbnails/\(post.storageRefForThumbnailImage.replacingOccurrences(of: "post_photos/", with: ""))")
+                                                storageRef.downloadURL { urlRes, error2 in
+                                                    if error2 == nil {
+                                                        print("* got url: \(urlRes)")
+                                                        self.db.collection("posts").document(post.userID).collection("posts").document(post.postID).setData(["thumbnail_url": urlRes?.absoluteString as! String], merge: true)
+                                                        
+                                                        post.thumbNailImageURL = urlRes?.absoluteString as! String
+                                                    } else {
+                                                        print("* error: \(error2)")
+                                                    }
+                                                    
+                                                    
+                                                }
+                                            }
                                             let userResult = CommentMadeNotification()
+                                            post.username = self.currentUsername
+                                            post.userImageUrl = self.currentProfilePic
+                                            post.userID = userID
                                             userResult.currentPost = post
                                             userResult.profileImageUrl = profileImageUrl
                                             userResult.postThumbnailURL = post.thumbNailImageURL
@@ -873,7 +1005,23 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                             if let postVals = (documentzz?.data() as? [String: AnyObject]) {
                                                 let post = self.getImagePostFrom(values: postVals, postID: (docData)?["postId"] as! String)
                                                 let userResult = likedCommentNotif()
-                                                
+                                                if post.thumbNailImageURL == "" {
+                                                    print("* EMPTY THUMBNAIL, UPDATING")
+                                                    print("* failure, pushing new photo")
+                                                    let storageRef = Storage.storage().reference().child("/post_thumbnails/\(post.storageRefForThumbnailImage.replacingOccurrences(of: "post_photos/", with: ""))")
+                                                    storageRef.downloadURL { urlRes, error2 in
+                                                        if error2 == nil {
+                                                            print("* got url: \(urlRes)")
+                                                            self.db.collection("posts").document(post.userID).collection("posts").document(post.postID).setData(["thumbnail_url": urlRes?.absoluteString as! String], merge: true)
+                                                            
+                                                            post.thumbNailImageURL = urlRes?.absoluteString as! String
+                                                        } else {
+                                                            print("* error: \(error2)")
+                                                        }
+                                                        
+                                                        
+                                                    }
+                                                }
                                                 userResult.profileImageUrl = profileImageUrl
                                                 userResult.postThumbnailURL = post.thumbNailImageURL
                                                 userResult.hasValidStory = isValidStory
@@ -920,16 +1068,29 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     reply.replyUserName = (docData)?["replyUserName"] as? String ?? ""
                                     reply.replyUserImage = (docData)?["replyUserImage"] as? String ?? ""
                                     reply.originalComment = (docData)?["originalComment"] as? String ?? ""
+                                    reply.hasValidStory = isValidStory
                                     reply.timeSince = Date(timeIntervalSince1970: TimeInterval(Double((docData?["timestamp"] as! Timestamp).seconds))).simplifiedTimeAgoDisplay()
                                     self.db.collection("posts").document(reply.userId).collection("posts").document(reply.postId).getDocument { (doc, err) in
                                         if let data = doc?.data() as? [String: AnyObject] {
                                             reply.postThumbnailURL = data["thumbnail_url"] as? String ?? ""
                                             let post = self.getImagePostFrom(values: data, postID: reply.postId)
                                             post.userID = reply.userId
-                                            reply.currentPost = post
+                                            usersRef.document((docData)?["userId"] as? String ?? "").getDocument { (document, error) in
+                                                if let document = document, document.exists {
+                                                    post.username = document.data()?["username"] as? String ?? ""
+                                                    post.userImageUrl = document.data()?["profileImageURL"] as? String ?? ""
+                                                    post.userID = (docData)?["userId"] as? String ?? ""
+                                                    reply.timeSince = Date(timeIntervalSince1970: TimeInterval(Double((docData?["timestamp"] as! Timestamp).seconds))).simplifiedTimeAgoDisplay()
+                                                    reply.currentPost = post
+                                                    self.notifications.append(reply)
+                                                }
+                                                mainPostDispatchQueue.leave()
+                                            }
+                                            
+//                                            reply.currentPost = post
                                         }
-                                        self.notifications.append(reply)
-                                        mainPostDispatchQueue.leave()
+//                                        self.notifications.append(reply)
+//                                        mainPostDispatchQueue.leave()
                                     }
 //                                    self.notifications.append(reply)
 //                                    mainPostDispatchQueue.leave()
@@ -950,16 +1111,28 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     reply_like.replyUserName = (docData)?["replyUserName"] as? String ?? ""
                                     reply_like.replyUserImage = (docData)?["replyUserImage"] as? String ?? ""
                                     reply_like.originalReply = (docData)?["originalReply"] as? String ?? ""
+                                    reply_like.hasValidStory = isValidStory
                                     reply_like.timeSince = Date(timeIntervalSince1970: TimeInterval(Double((docData?["timestamp"] as! Timestamp).seconds))).simplifiedTimeAgoDisplay()
                                     self.db.collection("posts").document(reply_like.userId).collection("posts").document(reply_like.postId).getDocument { (doc, err) in
                                         if let data = doc?.data() as? [String: AnyObject] {
                                             reply_like.postThumbnailURL = data["thumbnail_url"] as? String ?? ""
                                             let post = self.getImagePostFrom(values: data, postID: reply_like.postId)
                                             post.userID = reply_like.userId
-                                            reply_like.currentPost = post
+//                                            reply_like.currentPost = post
+                                            usersRef.document((docData)?["userId"] as? String ?? "").getDocument { (document, error) in
+                                                if let document = document, document.exists {
+                                                    post.username = document.data()?["username"] as? String ?? ""
+                                                    post.userImageUrl = document.data()?["profileImageURL"] as? String ?? ""
+                                                    post.userID = (docData)?["userId"] as? String ?? ""
+                                                    reply_like.timeSince = Date(timeIntervalSince1970: TimeInterval(Double((docData?["timestamp"] as! Timestamp).seconds))).simplifiedTimeAgoDisplay()
+                                                    reply_like.currentPost = post
+                                                    self.notifications.append(reply_like)
+                                                }
+                                                mainPostDispatchQueue.leave()
+                                            }
                                         }
-                                        self.notifications.append(reply_like)
-                                        mainPostDispatchQueue.leave()
+//                                        self.notifications.append(reply_like)
+//                                        mainPostDispatchQueue.leave()
                                     }
                                     
                                 } else if notificationType == "requested_to_follow" {
@@ -970,8 +1143,64 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     flw_request.hasAccepted = false
                                     flw_request.timeSince = Date(timeIntervalSince1970: TimeInterval(flw_request.followingTimeStamp)).simplifiedTimeAgoDisplay()
                                     flw_request.uid = postVals?["uid"] as? String ?? ""
+                                    flw_request.hasValidStory = isValidStory
                                     self.notifications.append(flw_request)
                                     mainPostDispatchQueue.leave()
+                                } else if (notificationType == "mentioned") {
+                                    print("* mentioned notification")
+                                    let reply = mentionNotification()
+                                    reply.timestamp = Double((docData?["timestamp"] as! Timestamp).seconds)
+                                    reply.userId = (docData)?["userId"] as? String ?? ""
+//                                    print("* [TSB] NOTIFICATIONS REPLY TIMESTAMP: \(reply.timestamp)")
+//                                    print("* reply doc data: \(docData)")
+                                    reply.postId = (docData)?["postId"] as? String ?? ""
+                                    reply.commentId = (docData)?["commentId"] as? String ?? ""
+                                    reply.hasValidStory = isValidStory
+                                    if (docData)?["replyId"] as? String ?? "" != "" {
+                                        print("* loading mention in reply")
+                                        reply.commentTextToShow = (docData)?["reply"] as? String ?? ""
+                                        reply.replyId = (docData)?["replyId"] as? String ?? ""
+                                        reply.commentId = (docData)?["commentId"] as? String ?? ""
+                                        reply.mentionType = "reply"
+                                    } else if (docData)?["commentUserID"] as? String ?? "" != "" {
+                                        print("* loading mention in comment")
+                                        reply.mentionType = "comment"
+                                        reply.commentTextToShow = (docData)?["comment"] as? String ?? ""
+                                        reply.commentId = (docData)?["commentId"] as? String ?? ""
+                                    } // else its a post, dont show anything
+                                    else {
+                                        reply.mentionType = "post"
+                                    }
+                                    reply.UserImageThatMentioned = profileImageUrl
+                                    reply.UserNamethatMentioned = username
+                                    reply.UserIDThatMentioned = idToCheck
+                                    reply.timeSince = Date(timeIntervalSince1970: TimeInterval(Double((docData?["timestamp"] as! Timestamp).seconds))).simplifiedTimeAgoDisplay()
+                                    print("* mention fetching from posts/\(reply.userId)/posts/\(reply.postId)")
+                                    self.db.collection("posts").document(reply.userId).collection("posts").document(reply.postId).getDocument { (doc, err) in
+                                        print("* data from mention fetch: \(doc?.data())")
+                                        if let data = doc?.data() as? [String: AnyObject] {
+                                            let post = self.getImagePostFrom(values: data, postID: reply.postId)
+                                            post.userID = reply.userId
+                                            post.usernameToShow = username
+                                            post.userImageUrl = profileImageUrl
+                                            usersRef.document((docData)?["userId"] as? String ?? "").getDocument { (document, error) in
+                                                if let document = document, document.exists {
+                                                    post.username = document.data()?["username"] as? String ?? ""
+                                                    post.userImageUrl = document.data()?["profileImageURL"] as? String ?? ""
+                                                    post.userID = (docData)?["userId"] as? String ?? ""
+                                                    reply.timeSince = Date(timeIntervalSince1970: TimeInterval(Double((docData?["timestamp"] as! Timestamp).seconds))).simplifiedTimeAgoDisplay()
+                                                    reply.currentPost = post
+                                                    self.notifications.append(reply)
+                                                }
+                                                mainPostDispatchQueue.leave()
+                                            }
+//                                            reply.currentPost = post
+                                            reply.postThumbnailURL = data["thumbnail_url"] as? String ?? ""
+                                            
+                                        }
+//                                        self.notifications.append(reply)
+//                                        mainPostDispatchQueue.leave()
+                                    }
                                 } else {
                                     // ADD MORE HERE
                                     print("* unknown notification type")
@@ -1007,6 +1236,8 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     return im1.likedTimeStamp > im2.timestamp
                                 } else if let im2 = obj2 as? ReqFollowNotif {
                                     return im1.likedTimeStamp > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.likedTimeStamp > im2.timestamp
                                 } else {
                                     return false
                                 }
@@ -1025,6 +1256,8 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     return im1.followingTimeStamp > im2.timestamp
                                 } else if let im2 = obj2 as? ReqFollowNotif {
                                     return im1.followingTimeStamp > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.followingTimeStamp > im2.timestamp
                                 } else {
                                     return false
                                 }
@@ -1043,6 +1276,8 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     return im1.createdAt > im2.timestamp
                                 } else if let im2 = obj2 as? ReqFollowNotif {
                                     return im1.createdAt > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.createdAt > im2.timestamp
                                 } else {
                                     return false
                                 }
@@ -1061,6 +1296,8 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     return im1.createdAt > im2.timestamp
                                 } else if let im2 = obj2 as? ReqFollowNotif {
                                     return im1.createdAt > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.createdAt > im2.timestamp
                                 } else {
                                     return false
                                 }
@@ -1079,6 +1316,8 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     return im1.timestamp > im2.timestamp
                                 } else if let im2 = obj2 as? ReqFollowNotif {
                                     return im1.timestamp > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.timestamp > im2.timestamp
                                 } else {
                                     return false
                                 }
@@ -1097,6 +1336,8 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     return im1.timestamp > im2.timestamp
                                 } else if let im2 = obj2 as? ReqFollowNotif {
                                     return im1.timestamp > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.timestamp > im2.timestamp
                                 } else {
                                     return false
                                 }
@@ -1115,6 +1356,28 @@ class NotificationsViewController: UIViewController, UITableViewDelegate, UITabl
                                     return im1.followingTimeStamp > im2.timestamp
                                 } else if let im2 = obj2 as? ReqFollowNotif {
                                     return im1.followingTimeStamp > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.followingTimeStamp > im2.timestamp
+                                } else {
+                                    return false
+                                }
+                            } else if let im1 = obj1 as? mentionNotification {
+                                if let im2 = obj2 as? LikedPostNotification {
+                                    return im1.timestamp > im2.likedTimeStamp
+                                } else if let im2 = obj2 as? FollowNotification {
+                                    return im1.timestamp > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? likedCommentNotif {
+                                    return im1.timestamp > im2.createdAt
+                                } else if let im2 = obj2 as? CommentMadeNotification {
+                                    return im1.timestamp > im2.createdAt
+                                } else if let im2 = obj2 as? ReplyMadeNotification {
+                                    return im1.timestamp > im2.timestamp
+                                } else if let im2 = obj2 as? likedReplyNotif {
+                                    return im1.timestamp > im2.timestamp
+                                } else if let im2 = obj2 as? ReqFollowNotif {
+                                    return im1.timestamp > im2.followingTimeStamp
+                                } else if let im2 = obj2 as? mentionNotification {
+                                    return im1.timestamp > im2.timestamp
                                 } else {
                                     return false
                                 }

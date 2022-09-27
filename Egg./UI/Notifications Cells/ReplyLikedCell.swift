@@ -51,6 +51,7 @@ class ReplyLikedCell: UITableViewCell {
     @IBOutlet weak var actualCommentTextLabel: UILabel!
     
     @IBOutlet weak var previewImage: UIImageView!
+    @IBOutlet weak var brodieBanner: UIImageView!
     
     var parentViewController: NotificationsViewController?
     var index = 0
@@ -64,8 +65,8 @@ class ReplyLikedCell: UITableViewCell {
         let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        likedYourPostLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        likedYourPostLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
         
         let titleWidths = Int(Int(self.contentView.frame.width) - profXY - profWid - 10 - 30 - (Int(self.contentView.bounds.height) - (30)))
         usernameLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: profXY, width: titleWidths, height: 16)
@@ -108,8 +109,17 @@ class ReplyLikedCell: UITableViewCell {
         
         print("* profileHeight: \(profilePicButton.frame.width), preview iamge: \(self.previewImage.frame.width)")
         downloadPreview(with: result.postThumbnailURL)
-        
-        actualCommentTextLabel.text = "\"\(result.originalReply)\""
+        if result.likeUserID == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+//            followButton.isHidden = true
+            usernameLabel.isHidden = true
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 16, width: 40, height: 18)
+            brodieBanner.isHidden = false
+            likedYourPostLabel.frame = CGRect(x: usernameLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        } else {
+            brodieBanner.isHidden = true
+            usernameLabel.isHidden = false
+        }
+        actualCommentTextLabel.text = "| \(result.originalReply)"
         actualCommentTextLabel.textColor = .lightGray
         actualCommentTextLabel.frame = CGRect(x: likedYourPostLabel.frame.minX, y: likedYourPostLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
     }

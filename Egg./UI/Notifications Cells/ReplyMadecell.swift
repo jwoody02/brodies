@@ -46,6 +46,7 @@ class ReplyMadeCell: UITableViewCell {
     @IBOutlet weak var originalCommentLabel: UILabel!
     
     @IBOutlet weak var previewImage: UIImageView!
+    @IBOutlet weak var brodieBanner: UIImageView!
     
     var parentViewController: NotificationsViewController?
     var index = 0
@@ -59,11 +60,11 @@ class ReplyMadeCell: UITableViewCell {
         let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        commentLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        commentLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
         
         let titleWidths = Int(Int(self.contentView.frame.width) - profXY - profWid - 30 - 50)
-        let heightForComment = (result.reply).height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 13)!)
+        let heightForComment = (result.reply).height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 12)!)
         if heightForComment + 12 + 16 + 16 < 48 {
             usernameLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 25, width: titleWidths, height: 16)
         } else {
@@ -112,6 +113,16 @@ class ReplyMadeCell: UITableViewCell {
         
         
         let titleWidths2 = Int(Int(self.contentView.frame.width) - profXY - profWid - 10 - 30 - (Int(self.contentView.bounds.height) - (30)))
+        if result.replyUserID == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+//            followButton.isHidden = true
+            usernameLabel.isHidden = true
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 16, width: 40, height: 18)
+            brodieBanner.isHidden = false
+            commentLabel.frame = CGRect(x: usernameLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        } else {
+            brodieBanner.isHidden = true
+            usernameLabel.isHidden = false
+        }
         originalCommentLabel.text = "|  \(result.originalComment)"
         originalCommentLabel.textColor = .lightGray
         originalCommentLabel.frame = CGRect(x: commentLabel.frame.minX, y: commentLabel.frame.maxY, width: CGFloat(titleWidths2), height: 15)

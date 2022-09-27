@@ -11,7 +11,11 @@ import FirebaseAuth
 import FirebaseFirestore
 struct Constants {
     static let borderRadius: CGFloat = 12
-    static let globalFont: String = "HelveticaNeue"
+//    static let globalFont: String = "HelveticaNeue"
+    static let globalFont: String = "PlusJakartaSans-Regular"
+    static let globalFontBold: String = "PlusJakartaSansRoman-Bold"
+    static let globalFontMedium: String = "PlusJakartaSansRoman-SemiBold"
+    static let globalFontItali: String = "PlusJakartaSans-Italic"
     
 //    purple theme
     static let primaryColor: String = "#5e5cf5"
@@ -66,7 +70,10 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
 //        logout()
         
         // Do any additional setup after loading the view.
-        
+        for family in UIFont.familyNames.sorted() {
+            let names = UIFont.fontNames(forFamilyName: family)
+            print("Family: \(family) Font names: \(names)")
+        }
         self.setupTabBarUI()
         self.addCustomTabBarView()
         self.setupTabBarViewer()
@@ -155,6 +162,8 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
             self.selectedTabBarViewMover?.frame = CGRect(x: newXC, y: Int(self.tabBar.getFrameForTabAt(index: (tabBar.items?.firstIndex(of: item))!)!.centerY) - (self.tabBarWidthHeight / 2) + 2, width: self.tabBarWidthHeight, height: self.tabBarWidthHeight)
             if (tabBar.items?.firstIndex(of: item))! == 3 {
                 self.redNotificationsCircle?.alpha = 0
+                self.shouldSetRedTing = false
+                UIApplication.shared.applicationIconBadgeNumber = 0
             }
         })
     }
@@ -188,13 +197,7 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
         handleRedView()
     }
     func handleRedView() {
-        let wid = 5
-        redNotificationsCircle = UIView(frame: CGRect(x: 0, y: 10, width: wid, height: wid))
-        redNotificationsCircle?.center.x = (self.tabBar.getFrameForTabAt(index: 3)!).centerX
-        redNotificationsCircle?.layer.cornerRadius = (redNotificationsCircle?.frame.width ?? 0) / 2
-        print("* red circle frame = \(redNotificationsCircle!.frame)")
-        self.tabBar.addSubview(redNotificationsCircle!)
-        self.tabBar.bringSubviewToFront(redNotificationsCircle!)
+        
         let userID = Auth.auth().currentUser?.uid
         if userID != nil {
             let notifQuery = db.collection("notifications").document(userID!)
@@ -206,14 +209,25 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
                     let followersCount = data?["num_followers_notifications"] as? Int ?? 0
                     let numPostLikes = data?["num_likes_notifications"] as? Int ?? 0
                     let numCommentLikes = data?["num_comments_likes_notifications"] as? Int ?? 0
-                    if commentsCount == 0 && followersCount == 0 && numPostLikes == 0 && numCommentLikes == 0 {
+                    let numMentiones = data?["num_mentions_notifications"] as? Int ?? 0
+                    UIApplication.shared.applicationIconBadgeNumber = totalCount
+                    if commentsCount == 0 && followersCount == 0 && numPostLikes == 0 && numCommentLikes == 0 && numMentiones == 0 {
                         print("* [tab bar] user has no new notifications")
                         shouldSetRedTing = false
-                        redNotificationsCircle?.alpha = 0
+                        
                     } else {
                         print("* [tab bar] user has some new notifs")
                         shouldSetRedTing = true
-                        redNotificationsCircle?.alpha = 1
+                        let wid = 5
+                        redNotificationsCircle = UIView(frame: CGRect(x: 0, y: Int((self.tabBar.getFrameForTabAt(index: 3)!).maxY) - 16, width: wid, height: wid))
+                        redNotificationsCircle?.center.x = (self.tabBar.getFrameForTabAt(index: 3)!).centerX
+                        redNotificationsCircle?.layer.cornerRadius = (redNotificationsCircle?.frame.width ?? 0) / 2
+                        print("* red circle frame = \(redNotificationsCircle!)")
+                        redNotificationsCircle?.backgroundColor = Constants.universalRed.hexToUiColor()
+                        self.tabBar.addSubview(redNotificationsCircle!)
+                        self.tabBar.bringSubviewToFront(redNotificationsCircle!)
+                        redNotificationsCircle?.alpha = 0
+                        redNotificationsCircle?.fadeIn()
                     }
                 }
             }
@@ -240,8 +254,10 @@ class mainTabBarController: UITabBarController, UITabBarControllerDelegate {
         self.tabBar.layoutIfNeeded()
         customTabBarView.frame = tabBar.frame
         
+        if let fr = self.tabBar.getFrameForTabAt(index: 4) {
+            self.profileImageView?.center.x = CGFloat(fr.centerX)
+        }
         
-        self.profileImageView?.center.x = CGFloat(self.tabBar.getFrameForTabAt(index: 4)!.centerX)
 //        self.profileImageView?.center.y = CGFloat(self.tabBar.getFrameForTabAt(index: 4)!.centerY)
     }
     private func setupTabBarUI() {

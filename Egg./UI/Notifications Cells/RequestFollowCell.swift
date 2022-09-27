@@ -30,6 +30,8 @@ class RequestFollowCell: UITableViewCell {
     
     @IBOutlet weak var followButton: UIButton!
     
+    @IBOutlet weak var brodieBanner: UIImageView!
+    
     var parentViewController: NotificationsViewController?
     var index = 0
     
@@ -42,8 +44,8 @@ class RequestFollowCell: UITableViewCell {
         let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        startedFollowingYouLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        startedFollowingYouLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
         let attrib = "wants to follow you.  \(result.timeSince)"
         let mutableAttributedString = NSMutableAttributedString.init(string: attrib)
         mutableAttributedString.setColorForText(result.timeSince, with: .lightGray)
@@ -85,6 +87,21 @@ class RequestFollowCell: UITableViewCell {
 //        self.followButton.center.y = self.contentView.frame.center.y
 //        self.followButton.fadeIn()
 //        arrButton.center.y = self.contentView.center.y
+        if result.uid == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+//            followButton.isHidden = true
+            usernameLabel.isHidden = true
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 23, width: 60, height: 22)
+            brodieBanner.isHidden = false
+            startedFollowingYouLabel.frame = CGRect(x: usernameLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        } else {
+            if result.uid == Auth.auth().currentUser?.uid {
+                followButton.isHidden = true
+            } else {
+                followButton.isHidden = false
+            }
+            brodieBanner.isHidden = true
+            usernameLabel.isHidden = false
+        }
     }
     func styleCellFor(notification: ReqFollowNotif, index: Int) {
         self.result = notification

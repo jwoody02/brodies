@@ -60,7 +60,7 @@ class addToCollectionCell: UITableViewCell {
         self.collectionNameLabel?.removeFromSuperview()
         self.collectionNameLabel = UILabel(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
         if let collectionNameLabel = self.collectionNameLabel {
-            collectionNameLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 15)
+            collectionNameLabel.font = UIFont(name: Constants.globalFontMedium, size: 14)
             collectionNameLabel.textColor = .darkGray
             self.contentView.addSubview(collectionNameLabel)
         }
@@ -68,7 +68,7 @@ class addToCollectionCell: UITableViewCell {
         self.numOfPosts = UILabel(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
         if let numOfPosts = self.numOfPosts {
             self.contentView.addSubview(numOfPosts)
-            numOfPosts.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+            numOfPosts.font = UIFont(name: "\(Constants.globalFont)", size: 13)
             numOfPosts.textColor = .lightGray
         }
         self.bigPlusImage?.removeFromSuperview()
@@ -166,7 +166,7 @@ class AddToCollectionPopup: UIViewController, UITableViewDelegate, UITableViewDa
         if let newCollectionLabel = self.newCollectionLabel {
             newCollectionLabel.text = "Add to Collection"
             newCollectionLabel.frame = CGRect(x: 0, y: 20, width: UIScreen.main.bounds.width, height: 25)
-            newCollectionLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            newCollectionLabel.font = UIFont(name: Constants.globalFontBold, size: 13)
             newCollectionLabel.textColor = .darkGray
             newCollectionLabel.textAlignment = .center
             self.view.addSubview(newCollectionLabel)

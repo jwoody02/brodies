@@ -438,7 +438,7 @@ public class NextLevel: NSObject {
     #endif
     internal var _metadataOutput: AVCaptureMetadataOutput?
 
-    internal var _currentDevice: AVCaptureDevice?
+    public var _currentDevice: AVCaptureDevice?
     internal var _requestedDevice: AVCaptureDevice?
     internal var _observers = [NSKeyValueObservation]()
     internal var _captureOutputObservers = [NSKeyValueObservation]()

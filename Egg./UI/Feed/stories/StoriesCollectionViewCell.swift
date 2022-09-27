@@ -19,7 +19,7 @@ class StoryCollectionViewCell: UICollectionViewCell {
     @IBOutlet weak var addToStory: UIButton!
     @IBOutlet weak var bottomBlackView: UIView!
     @IBOutlet weak var timePostedLabel: UILabel!
-    
+    var yourViewBorder = CAShapeLayer()
     @IBOutlet weak var profilePicButton: IGStoryButton!
     
     func styleComponents(story: storyPost) {
@@ -39,11 +39,11 @@ class StoryCollectionViewCell: UICollectionViewCell {
         self.FlagShipImageView.contentMode = .scaleAspectFill
         
         self.timePostedLabel.frame = CGRect(x: 10, y: Int(self.frame.height) - 25, width: Int(self.frame.width) - 20, height: 15)
-        self.timePostedLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
+        self.timePostedLabel.font = UIFont(name: "\(Constants.globalFont)", size: 10)
 //        self.timePostedLabel.textColor = .systemGray4
-        self.timePostedLabel.textColor = hexStringToUIColor(hex: "#dcdcdc") // bdbdbd
+        self.timePostedLabel.textColor = hexStringToUIColor(hex: "#bdbdbd") // bdbdbd
         self.timePostedLabel.text = story.createdAt.storySimplifiedTimeAgo()
-        self.nameLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+        self.nameLabel.font = UIFont(name: Constants.globalFontMedium, size: 12)
         if story.isMyStory {
             self.nameLabel.text = "Your Story"
             profilePicButton.isHidden = true
@@ -59,7 +59,7 @@ class StoryCollectionViewCell: UICollectionViewCell {
                 self.bigPlusButton.contentMode = .scaleAspectFit
                 
                 self.backgroundColor = hexStringToUIColor(hex: Constants.surfaceColor)
-                var yourViewBorder = CAShapeLayer()
+                
                 yourViewBorder.strokeColor = hexStringToUIColor(hex: Constants.primaryColor).cgColor
                 yourViewBorder.lineDashPattern = [8, 6]
                 yourViewBorder.frame = self.bounds
@@ -67,18 +67,19 @@ class StoryCollectionViewCell: UICollectionViewCell {
                 yourViewBorder.path = UIBezierPath(roundedRect: self.bounds, cornerRadius: self.layer.cornerRadius).cgPath
                 self.layer.addSublayer(yourViewBorder)
                 self.nameLabel.textColor = hexStringToUIColor(hex: Constants.primaryColor)
-                self.nameLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 15)
+                self.nameLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.nameLabel.textAlignment = .center
                 self.nameLabel.frame = CGRect(x: 0, y: bigPlusButton.frame.maxY + 40, width: self.frame.width, height: 30)
                 bottomBlackView.isHidden = true
                 self.timePostedLabel.isHidden = true
                 
                 self.FlagShipImageView.isHidden = true
+                yourViewBorder.isHidden = false
             } else {
 //                self.backgroundColor = .lightGray
                 self.backgroundColor = .black
                 setPostImage(fromUrl: story.imageUrl)
-                self.nameLabel.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+                self.nameLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
                 let nameX = 10
                 let nameHeight = 33
                 self.nameLabel.numberOfLines = 0
@@ -103,7 +104,7 @@ class StoryCollectionViewCell: UICollectionViewCell {
             self.backgroundColor = .black
             setPostImage(fromUrl: story.imageUrl)
             nameLabel.text = story.author_full_name
-            self.nameLabel.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+            self.nameLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
             let nameX = 10
             let nameHeight = 33
             self.nameLabel.numberOfLines = 0
@@ -112,6 +113,7 @@ class StoryCollectionViewCell: UICollectionViewCell {
             self.nameLabel.contentMode = .bottom
             self.nameLabel.preferredMaxLayoutWidth = CGFloat(Int(self.frame.width) - (nameX*2))
             self.nameLabel.sizeToFit()
+            self.nameLabel.textColor = .white
             let heightz = self.nameLabel.frame.height
             self.nameLabel.frame = CGRect(x: CGFloat(nameX), y: CGFloat(Int(self.frame.height)) - heightz - 26, width: CGFloat(Int(self.frame.width) - (nameX*2)), height: heightz)
             self.bottomBlackView.isHidden = false
@@ -135,6 +137,11 @@ class StoryCollectionViewCell: UICollectionViewCell {
             } else {
                 downloadProfilePicImage(with: story.userImageUrl)
             }
+            yourViewBorder.removeFromSuperlayer()
+            bottomBlackView.isHidden = false
+            self.timePostedLabel.isHidden = false
+            
+            self.FlagShipImageView.isHidden = false
         }
         if Constants.isDebugEnabled {
 //            var window : UIWindow = UIApplication.shared.keyWindow!

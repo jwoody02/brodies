@@ -9,6 +9,8 @@ import UIKit
 import FirebaseFirestore
 import FirebaseAuth
 import NextLevel
+import SwiftUI
+
 extension StoriesTableViewCell: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let width = Int(UIScreen.main.bounds.width / 3.25)
@@ -34,7 +36,13 @@ extension StoriesTableViewCell: UICollectionViewDelegate, UICollectionViewDataSo
         }
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let story = stories[indexPath.row]
-        print("* story selected")
+        
+        var appData: AppData = AppData()
+        @Namespace var animation
+        @Binding var presentingStory: Bool!
+//        @Binding var selectedStory: Int!
+        
+        
         if story.isMyStory && story.isEmpty {
             let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
@@ -53,26 +61,7 @@ extension StoriesTableViewCell: UICollectionViewDelegate, UICollectionViewDataSo
             let userStories = storiesRef.document(story.userID).collection("stories").whereField("createdAt", isLessThan: now).whereField("createdAt", isGreaterThan: oneDayAgo).order(by: "createdAt", descending: false).limit(to: 20)
             
             var stores:  [storyPost] = [storyPost] ()
-            var storey = [
-                "name":"\(story.username)",
-                "contentNature":0,
-                "previewAsset":"",
-                "contents":
-                    [
-                        [
-                            "contentType":0,
-                            "assetName":"cathd",
-                            "externalURL":"",
-                            "duration":10
-                        ],
-                        [
-                            "contentType":0,
-                            "assetName":"pandahd",
-                            "externalURL":"",
-                            "duration":10
-                        ]
-                    ]
-            ] as [String : Any]
+            var storee = Story(username: "", userImage: "", contents: [])
             userStories.getDocuments() { (querySnapshot, err) in
                 if let err = err {
                     print("Error getting documents: \(err)")
@@ -84,18 +73,30 @@ extension StoriesTableViewCell: UICollectionViewDelegate, UICollectionViewDataSo
                         for document in querySnapshot!.documents {
                             print("* \(document.documentID) => \(document.data())")
                             let values = document.data()  as? [String: Any]
-                            var storyToPresent = storyPost()
-                            storyToPresent.imageUrl = values?["storyImageUrl"] as? String ?? ""
-                            storyToPresent.createdAt = values?["createdAt"] as? Double ?? Double(NSDate().timeIntervalSince1970)
-                            storyToPresent.userID = document.documentID
-                            storyToPresent.userImageUrl = story.userImageUrl
-                            storyToPresent.username = story.username
-                            storyToPresent.author_full_name = story.author_full_name
-                            stores.append(storyToPresent)
+                            
+                            storee.contents.append(StoryContent(mediaURL: values?["storyImageUrl"] as? String ?? "", duration: 3, seen: false, date: Date(timeIntervalSince1970: values?["createdAt"] as? Double ?? 0)))
                             
                             if document == querySnapshot?.documents.last {
-                                print("* reached last story, presenting")
+                                
+                                storee.username = story.username
+                                storee.userImage = story.userImageUrl
+                                var i = 0
+                                for s in appData.stories {
+                                    if s.username == story.username {
+                                        print("* username story exists, removing")
+                                        appData.stories.remove(at: i)
+                                    }
+                                    i+=1
+                                }
+                                print("* reached last story, presenting \(storee)")
+//                                appData.stories.append(storee)
+//                                presentingStory = true
+//                                selectedStory = 0
+                                let swiftUIView = StoryView(story: storee, animation: animation)// swiftUIView is View
                                
+                                let viewCtrl = UIHostingController(rootView: swiftUIView)
+                                viewCtrl.modalPresentationStyle = .overFullScreen
+                                self.findViewController()?.present(viewCtrl, animated: true)
                             }
                             
                         }

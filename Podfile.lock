@@ -596,6 +596,7 @@ PODS:
     - abseil/base/base_internal
     - abseil/base/config
     - abseil/meta/type_traits
+  - ActiveLabel (1.1.0)
   - Alamofire (4.9.1)
   - AlamofireImage (3.6.0):
     - Alamofire (~> 4.9)
@@ -612,6 +613,7 @@ PODS:
     - BoringSSL-GRPC/Interface (= 0.0.24)
   - BoringSSL-GRPC/Interface (0.0.24)
   - DGElasticPullToRefresh (1.1)
+  - DPTagTextView (2.5.1)
   - DWAnimatedLabel (1.2)
   - FirebaseAnalytics (9.4.0):
     - FirebaseAnalytics/AdIdSupport (= 9.4.0)
@@ -656,6 +658,8 @@ PODS:
     - FirebaseCore (~> 9.0)
   - FirebaseCoreInternal (9.4.0):
     - "GoogleUtilities/NSData+zlib (~> 7.7)"
+  - FirebaseDynamicLinks (9.6.0):
+    - FirebaseCore (~> 9.0)
   - FirebaseFirestore (9.4.0):
     - abseil/algorithm (~> 1.20211102.0)
     - abseil/base (~> 1.20211102.0)
@@ -799,9 +803,16 @@ PODS:
     - AppAuth/Core (~> 1.4)
     - GTMSessionFetcher/Core (~> 1.5)
   - GTMSessionFetcher/Core (1.7.2)
+  - ImageSlideshow (1.9.2):
+    - ImageSlideshow/Core (= 1.9.2)
+  - ImageSlideshow/Core (1.9.2)
+  - ImageSlideshow/Kingfisher (1.9.2):
+    - ImageSlideshow/Core
+    - Kingfisher (> 3.0)
   - InjectableLoggers (2.1.1)
   - iOSPhotoEditor (1.0.0)
   - IQKeyboardManager (6.5.10)
+  - ISPageControl (0.1.0)
   - Kingfisher (7.3.1)
   - leveldb-library (1.22.1)
   - Libuv-gRPC (0.0.10):
@@ -1462,56 +1473,78 @@ PODS:
   - nanopb/decode (2.30909.0)
   - nanopb/encode (2.30909.0)
   - NextLevel (0.16.5)
+  - PageControls (1.0.1):
+    - PageControls/FilledPageControl (= 1.0.1)
+    - PageControls/PillPageControl (= 1.0.1)
+    - PageControls/ScrollingPageControl (= 1.0.1)
+    - PageControls/SnakePageControl (= 1.0.1)
+  - PageControls/FilledPageControl (1.0.1)
+  - PageControls/PillPageControl (1.0.1)
+  - PageControls/ScrollingPageControl (1.0.1)
+  - PageControls/SnakePageControl (1.0.1)
   - PanModal (1.2.7)
   - Presentr (1.9)
   - PromisesObjC (2.1.1)
   - SkeletonView (1.21.2)
   - SPAlert (4.2.0)
   - SwiftKeychainWrapper (4.0.1)
+  - SwiftyGif (5.4.3)
   - SwipeableTabBarController (3.4.2)
+  - TransitionButton (0.5.3)
   - ViewAnimator (3.1.0)
   - Zoomy (4.0.0):
     - InjectableLoggers (~> 2.0)
 
 DEPENDENCIES:
+  - ActiveLabel
   - Alamofire (~> 4.0)
   - AlamofireImage (~> 3.0)
   - DGElasticPullToRefresh
+  - DPTagTextView
   - DWAnimatedLabel (~> 1.1)
   - FirebaseAnalytics
   - FirebaseAppCheck
   - FirebaseAuth
   - FirebaseCore
+  - FirebaseDynamicLinks
   - FirebaseFirestore
   - FirebaseMessaging
   - FirebaseStorage
   - FMPhotoPicker (~> 1.3.0)
   - Google-Mobile-Ads-SDK
   - GoogleSignIn
+  - ImageSlideshow (~> 1.9.0)
+  - ImageSlideshow/Kingfisher
   - iOSPhotoEditor
   - IQKeyboardManager
+  - ISPageControl (~> 0.1.0)
   - Kingfisher
   - loady
   - MaterialComponents
   - MDFInternationalization
   - NextLevel (~> 0.16.3)
+  - PageControls
   - PanModal
   - Presentr
   - SkeletonView (~> 1.21.0)
   - SPAlert
   - SwiftKeychainWrapper
+  - SwiftyGif
   - SwipeableTabBarController
+  - TransitionButton
   - ViewAnimator
   - Zoomy
 
 SPEC REPOS:
   trunk:
     - abseil
+    - ActiveLabel
     - Alamofire
     - AlamofireImage
     - AppAuth
     - BoringSSL-GRPC
     - DGElasticPullToRefresh
+    - DPTagTextView
     - DWAnimatedLabel
     - FirebaseAnalytics
     - FirebaseAppCheck
@@ -1522,6 +1555,7 @@ SPEC REPOS:
     - FirebaseCoreDiagnostics
     - FirebaseCoreExtension
     - FirebaseCoreInternal
+    - FirebaseDynamicLinks
     - FirebaseFirestore
     - FirebaseInstallations
     - FirebaseMessaging
@@ -1538,9 +1572,11 @@ SPEC REPOS:
     - gRPC-Core
     - GTMAppAuth
     - GTMSessionFetcher
+    - ImageSlideshow
     - InjectableLoggers
     - iOSPhotoEditor
     - IQKeyboardManager
+    - ISPageControl
     - Kingfisher
     - leveldb-library
     - Libuv-gRPC
@@ -1552,23 +1588,28 @@ SPEC REPOS:
     - MotionInterchange
     - nanopb
     - NextLevel
+    - PageControls
     - PanModal
     - Presentr
     - PromisesObjC
     - SkeletonView
     - SPAlert
     - SwiftKeychainWrapper
+    - SwiftyGif
     - SwipeableTabBarController
+    - TransitionButton
     - ViewAnimator
     - Zoomy
 
 SPEC CHECKSUMS:
   abseil: ebe5b5529fb05d93a8bdb7951607be08b7fa71bc
+  ActiveLabel: 5e3f4de79a1952d4604b845a0610d4776e4b82b3
   Alamofire: 85e8a02c69d6020a0d734f6054870d7ecb75cf18
   AlamofireImage: be9963c6582d68b39e89191f64c82a7d7bf40fdd
   AppAuth: 80317d99ac7ff2801a2f18ff86b48cd315ed465d
   BoringSSL-GRPC: 3175b25143e648463a56daeaaa499c6cb86dad33
   DGElasticPullToRefresh: 28f11a6026302a90f8ffebbc6e24748e584dddd3
+  DPTagTextView: b7eb435e9193c8bc8b56d93bd22331191abd5e3f
   DWAnimatedLabel: 2c5742ea5584187592508e5cee0a9b0e8e8c6af0
   FirebaseAnalytics: a1a24e72b7ba7f47045a4633f1abb545c07bd29c
   FirebaseAppCheck: 84e58ced2b43249bb75529da1c33193b71e9c3c6
@@ -1579,6 +1620,7 @@ SPEC CHECKSUMS:
   FirebaseCoreDiagnostics: aaa87098082c4d4bdd1a9557b1186d18ca85ce8c
   FirebaseCoreExtension: 2cf8c542b54ad3c2d4b746c22e8828b670dcd9b0
   FirebaseCoreInternal: a13302b0088fbf5f38b79b6ece49c2af7d3e05d6
+  FirebaseDynamicLinks: 894ee3b4e56a77abee067d371c9a23e7b5a3c686
   FirebaseFirestore: 945196dd78f4e92de6fc47b38569a1e7088af81f
   FirebaseInstallations: 61db1054e688d2bdc4e2b3f744c1b086e913b742
   FirebaseMessaging: 4e220eddd356181469ba2ec5f7d5fafbc2312841
@@ -1595,9 +1637,11 @@ SPEC CHECKSUMS:
   gRPC-Core: 943e491cb0d45598b0b0eb9e910c88080369290b
   GTMAppAuth: 4d8f864896f3646f0c33baf38a28362f4c601e15
   GTMSessionFetcher: 5595ec75acf5be50814f81e9189490412bad82ba
+  ImageSlideshow: be305b54eaf2b2cfc7a7141c7c734605d44dc07d
   InjectableLoggers: 7bc1a68fb12d73785d3d50944a3f1744a8cea868
   iOSPhotoEditor: 2951f35246a31dcb428b6292248a9c065582d03e
   IQKeyboardManager: 45a1fa55c1a5b02c61ac0fd7fd5b62bb4ad20d97
+  ISPageControl: cadeb38e9ecdf05540c69ea1132612521b3caa2a
   Kingfisher: f411ab4902e733fc0c40522920fb5a236d7a7334
   leveldb-library: 50c7b45cbd7bf543c81a468fe557a16ae3db8729
   Libuv-gRPC: 55e51798e14ef436ad9bc45d12d43b77b49df378
@@ -1609,16 +1653,19 @@ SPEC CHECKSUMS:
   MotionInterchange: 13adae439b377e31d1674cc165539d50e1d1566a
   nanopb: b552cce312b6c8484180ef47159bc0f65a1f0431
   NextLevel: b9b9b65c7c6dc83f109b2c67aa362593108335a5
+  PageControls: fc2436c93e79419521a6de5d46d84722593e2949
   PanModal: 3e16ead1a907fb06f4df3f13492fd00149fa4974
   Presentr: 7078d7eb5d1661ebeaae60c9e42a1e534de1b993
   PromisesObjC: ab77feca74fa2823e7af4249b8326368e61014cb
   SkeletonView: a085533443fed0198309f1979780afb6e80eaedd
   SPAlert: 735da1f16a887e294719217572ce1f936d8c8782
   SwiftKeychainWrapper: 807ba1d63c33a7d0613288512399cd1eda1e470c
+  SwiftyGif: 6c3eafd0ce693cad58bb63d2b2fb9bacb8552780
   SwipeableTabBarController: 9a218bdee9426d1bfe36d7962f852024bb08d61b
+  TransitionButton: 36283346e17c64775a1b3bc3a7a72940a367de1f
   ViewAnimator: a9ceed80266e00fd435ec4fb99b2df64d580d0e4
   Zoomy: 598d7a6d52567e4f8bf2e557907bbd9d7e725664
 
-PODFILE CHECKSUM: fd8062502979e3eee0080b1c4d6a1e23b6559cf5
+PODFILE CHECKSUM: 6aece5940858ddd8f13b0e5b6e8715732eb9eadd
 
 COCOAPODS: 1.11.3

@@ -14,6 +14,7 @@ import FirebaseAuth
 import SPAlert
 import FirebaseAnalytics
 import Kingfisher
+import ActiveLabel
 
 class ReplyTableViewCell: UITableViewCell {
 //    weak var multiTapDelegate: MultiTappableDelegate?
@@ -24,12 +25,14 @@ class ReplyTableViewCell: UITableViewCell {
     @IBOutlet weak var profilePicImage: UIImageView!
     @IBOutlet weak var usernameButton: UIButton!
     
-    @IBOutlet weak var actualCommentLabel: VerticalAlignLabel!
+    @IBOutlet weak var actualCommentLabel: ActiveLabel! //VerticalAlignLabel
     @IBOutlet weak var timeSincePostedLabel: UILabel!
     
 //    @IBOutlet weak var bottomGrayView: UIView!
     @IBOutlet weak var heartButton: UIButton!
     @IBOutlet weak var likesCountLabel: UILabel!
+    @IBOutlet weak var brodieBanner: UIImageView!
+    
     var yourViewBorder = CAShapeLayer()
     var oldestStoryID = ""
     var commentID = ""
@@ -112,6 +115,58 @@ class ReplyTableViewCell: UITableViewCell {
         
         styleMainStuff()
         styleBottomStuff()
+        styleActiveLabel()
+        let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(longPressed))
+        self.contentView.addGestureRecognizer(longPressRecognizer)
+    }
+    
+                                              @objc func longPressed(sender: UILongPressGestureRecognizer)
+    {
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.impactOccurred()
+        showCommentSharePopup()
+    }
+    func showCommentSharePopup() {
+        let vc = ThreeDotsOnComment()
+        vc.postID = self.parentVC!.actualPost.postID
+        vc.authorOfPost = self.parentVC!.actualPost.userID
+//        vc.imagePostURL = self.actualPost.imageUrl
+        vc.mainText = reply.replyText
+        vc.authorOFComment = reply.authorID
+        vc.replyID = reply.replyID
+        vc.commentID = reply.commentID
+        self.findViewController()?.presentPanModal(vc)
+    }
+    func styleActiveLabel() {
+        actualCommentLabel.enabledTypes = [.mention, .hashtag, .url]
+        actualCommentLabel.customize { label in
+            label.hashtagColor = Constants.primaryColor.hexToUiColor().withAlphaComponent(0.7)
+            label.mentionColor = Constants.primaryColor.hexToUiColor()
+            label.URLColor = Constants.primaryColor.hexToUiColor()
+            label.handleMentionTap { userHandle in
+                print("* opening profile for user: @\(userHandle)")
+                let userLocalRef = self.db.collection("user-locations").whereField("username", isEqualTo: userHandle.lowercased()).limit(to: 1)
+                userLocalRef.getDocuments() { (querySnapshot, err) in
+                    if let err = err {
+                        print("Error getting documents: \(err)")
+                    } else {
+                        if querySnapshot?.count != 0 {
+                            print("* got user doc: \(querySnapshot?.documents[0].documentID)")
+                            self.openProfileForUser(withUID: (querySnapshot?.documents[0].documentID)!)
+                        }
+                    }
+                }
+            }
+//            label.handleHashtagTap { self.alert("Hashtag", message: $0) }
+            label.handleURLTap { url in
+                print("* opening url: \(url)")
+                if #available(iOS 10.0, *) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                } else {
+                    UIApplication.shared.openURL(url)
+                }
+            }
+        }
     }
     func styleMainStuff() {
         profilePicImage.layer.cornerRadius = 8
@@ -130,13 +185,17 @@ class ReplyTableViewCell: UITableViewCell {
         usernameButton.sizeToFit()
 //        usernameButton.backgroundColor = self.contentView.backgroundColor
         usernameButton.backgroundColor = Constants.backgroundColor.hexToUiColor()
-        usernameButton.frame = CGRect(x: profilePicImage.frame.maxX + 10, y: profilePicImage.frame.minY - 2, width: usernameButton.frame.width, height: 14)
+        usernameButton.frame = CGRect(x: profilePicImage.frame.maxX + 10, y: profilePicImage.frame.minY, width: usernameButton.frame.width, height: 14)
         
         actualCommentLabel.text = reply.replyText
         actualCommentLabel.numberOfLines = 0
-        actualCommentLabel.frame = CGRect(x: usernameButton.frame.minX, y: usernameButton.frame.maxY+5, width: self.contentView.frame.width - profilePicImage.frame.maxY - 35 - 45, height: 0)
-        actualCommentLabel.sizeToFit()
-        actualCommentLabel.frame = CGRect(x: usernameButton.frame.minX, y: usernameButton.frame.maxY+5, width: actualCommentLabel.frame.width, height: actualCommentLabel.frame.height)
+        actualCommentLabel.frame = CGRect(x: usernameButton.frame.minX, y: usernameButton.frame.maxY+5, width: self.contentView.frame.width - profilePicImage.frame.maxY - 45 - 20, height: 0)
+//        actualCommentLabel.sizeToFit()
+//        actualCommentLabel.frame = CGRect(x: usernameButton.frame.minX, y: usernameButton.frame.maxY+5, width: actualCommentLabel.frame.width, height: actualCommentLabel.frame.height)
+        let fixedWidth = (self.contentView.frame.width - profilePicImage.frame.maxY - 45 - 20)
+        let sizeThatFitsTextView = reply.replyText.height(withConstrainedWidth: fixedWidth, font: actualCommentLabel.font) + 2
+        actualCommentLabel.frame = CGRect(x: usernameButton.frame.minX, y: usernameButton.frame.maxY+2, width: fixedWidth, height: sizeThatFitsTextView)
+        print("* calculated height for textView: \(sizeThatFitsTextView)")
         
 //        timeSincePostedLabel.font = UIFont(name: "\(Constants.globalFont)", size: 9)
         timeSincePostedLabel.textColor = UIColor.lightGray
@@ -144,9 +203,22 @@ class ReplyTableViewCell: UITableViewCell {
         
         timeSincePostedLabel.font = UIFont(name: "\(Constants.globalFont)", size: 11)
         let timeSince = Date(timeIntervalSince1970: Double(reply.timestamp)).simplifiedTimeAgoDisplay()
-        timeSincePostedLabel.text = "\(reply.authorUserName)    • \(timeSince)"
+        timeSincePostedLabel.text = "\(reply.authorUserName)     ∙ \(timeSince)"
         timeSincePostedLabel.frame = CGRect(x: usernameButton.frame.minX, y: usernameButton.frame.minY, width: contentView.bounds.width - 30 - usernameButton.frame.maxX, height: 16)
-        
+        if reply.authorID == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+            usernameButton.isHidden = true
+            brodieBanner.isHidden = false
+            timeSincePostedLabel.isHidden = true
+            brodieBanner.frame = CGRect(x: profilePicImage.frame.maxX + 10, y: profilePicImage.frame.minY, width: 40, height: 15)
+        } else {
+            timeSincePostedLabel.isHidden = false
+            usernameButton.isHidden = false
+            brodieBanner.isHidden = true
+        }
+        usernameButton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 12)
+        actualCommentLabel.font = UIFont(name: Constants.globalFont, size: 11)
+        likesCountLabel.font = UIFont(name: Constants.globalFontBold, size: 11)
+//        commentCountLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
     }
     
     func styleBottomStuff() {
@@ -296,12 +368,19 @@ class ReplyTableViewCell: UITableViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        contentView.frame = contentView.frame.inset(by: UIEdgeInsets(top: 5, left: 10, bottom: 5, right: 10))
+        contentView.frame = contentView.frame.inset(by: UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 10))
         styleCell()
         if Constants.isDebugEnabled {
 //            var window : UIWindow = UIApplication.shared.keyWindow!
 //            window.showDebugMenu()
             self.debuggingStyle = true
         }
+    }
+    override func prepareForReuse() {
+        if let ur = URL(string:reply.authorProfilePic) {
+            KingfisherManager.shared.downloader.cancel(url: ur)
+        }
+        
+        self.profilePicImage.image = UIImage(named: "no-profile-img.jpeg")
     }
 }

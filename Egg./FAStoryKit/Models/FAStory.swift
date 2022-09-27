@@ -7,10 +7,20 @@
 //
 
 import UIKit
-
-
-/// Main story container object
-
+struct CompleteUserStory {
+    var stories: [storyPost]
+    var story_count: Int = 0
+    var full_name: String = ""
+    var username: String = ""
+    var profilePicURL: String = ""
+    var userId: String = ""
+    var lastSeenStoryID: String  = ""
+    var lastSeenStoryTimestamp: Double = 0
+    
+}
+//
+///// Main story container object
+//
 final public class FAStory: NSObject, FAStoryTeller, Decodable {
     // ==================================================== //
     // MARK: Properties

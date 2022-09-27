@@ -41,7 +41,7 @@ class NewCollectionVC: UIViewController, UITextFieldDelegate {
         if let newCollectionLabel = self.newCollectionLabel {
             newCollectionLabel.text = "New Collection"
             newCollectionLabel.frame = CGRect(x: 0, y: 20, width: UIScreen.main.bounds.width, height: 25)
-            newCollectionLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+            newCollectionLabel.font = UIFont(name: "HelveticaNeue-Bold", size: 16)
             newCollectionLabel.textColor = .darkGray
             newCollectionLabel.textAlignment = .center
             self.view.addSubview(newCollectionLabel)
@@ -51,7 +51,7 @@ class NewCollectionVC: UIViewController, UITextFieldDelegate {
         if let newLabel = self.newLabel {
             newLabel.text = "Name"
             newLabel.frame = CGRect(x: 15, y: newCollectionLabel!.frame.maxY + 20, width: UIScreen.main.bounds.width - 70, height: 25)
-            newLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+            newLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
             newLabel.textColor = .darkGray
             newLabel.textAlignment = .left
             self.view.addSubview(newLabel)
@@ -61,7 +61,7 @@ class NewCollectionVC: UIViewController, UITextFieldDelegate {
             characterCountLabel.text = "0/30"
             characterCountLabel.frame = CGRect(x: 15, y: newCollectionLabel!.frame.maxY + 20, width: UIScreen.main.bounds.width - 70, height: 25)
             characterCountLabel.frame = CGRect(x: UIScreen.main.bounds.width - 15 - characterCountLabel.frame.width, y: characterCountLabel.frame.minY, width: characterCountLabel.frame.width, height: characterCountLabel.frame.height)
-            characterCountLabel.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+            characterCountLabel.font = UIFont(name: "HelveticaNeue", size: 14)
             characterCountLabel.center.y = newLabel!.center.y
             characterCountLabel.textColor = .lightGray
             characterCountLabel.textAlignment = .right
@@ -71,7 +71,7 @@ class NewCollectionVC: UIViewController, UITextFieldDelegate {
         if let collectionNameTextField = self.collectionNameTextField {
             collectionNameTextField.placeholder = "Enter collection name"
             collectionNameTextField.frame = CGRect(x: 15, y: newLabel!.frame.maxY + 10, width: UIScreen.main.bounds.width - 30, height: 25)
-            collectionNameTextField.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+            collectionNameTextField.font = UIFont(name: "HelveticaNeue", size: 14)
             collectionNameTextField.textColor = .darkGray
             collectionNameTextField.textAlignment = .left
             collectionNameTextField.addBottomBorder(withColor: UIColor.darkGray)
@@ -85,7 +85,7 @@ class NewCollectionVC: UIViewController, UITextFieldDelegate {
             createCollection.addTarget(self, action: #selector(createButtonPressed(_:)), for: .touchUpInside)
             createCollection.frame = CGRect(x: 15, y: collectionNameTextField!.frame.maxY + 25, width: collectionNameTextField!.frame.width, height: 53)
             makeCreatebuttonGrey()
-            createCollection.titleLabel!.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            createCollection.titleLabel!.font = UIFont(name: "HelveticaNeue-Bold", size: 14)
             self.view.addSubview(createCollection)
         }
     }
@@ -203,7 +203,7 @@ extension NewCollectionVC: PanModalPresentable {
     }
 
     var longFormHeight: PanModalHeight {
-        let actualHeight = 650
+        let actualHeight = 670
         
         return .maxHeightWithTopInset(UIScreen.main.bounds.height-CGFloat(actualHeight))
     }
@@ -214,7 +214,10 @@ extension NewCollectionVC: PanModalPresentable {
 }
 extension String {
     func camelCase() -> String {
-        return self.removeEmoji().replacingOccurrences(of: " ", with: "_").lowercased()
+        let textWithoutEmoij = self.unicodeScalars
+            .filter { !$0.properties.isEmojiPresentation }
+            .reduce("") { $0 + String($1) }
+        return textWithoutEmoij.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: "/", with: "-").lowercased()
     }
     func removeEmoji() -> String {
         return self.unicodeScalars

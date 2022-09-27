@@ -72,7 +72,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
         if let reportIssueLabel = self.reportIssueLabel {
             reportIssueLabel.text = "Report an issue"
             reportIssueLabel.frame = CGRect(x: 0, y: 20, width: UIScreen.main.bounds.width, height: 25)
-            reportIssueLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 15)
+            reportIssueLabel.font = UIFont(name: Constants.globalFontBold, size: 14)
             reportIssueLabel.textColor = .darkGray
             reportIssueLabel.textAlignment = .center
             self.view.addSubview(reportIssueLabel)
@@ -84,7 +84,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
             } else {
                 whatIsWrongLabel.text = "Please only report a post if it belongs in one of the categories listed below. Excessive false reporting on posts can lead to suspension and possible ban. If you or someone you know is in danger, immediately go to local authorities."
             }
-            whatIsWrongLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
+            whatIsWrongLabel.font = UIFont(name: "\(Constants.globalFont)", size: 11)
             whatIsWrongLabel.textColor = .lightGray
             whatIsWrongLabel.numberOfLines = 0
             whatIsWrongLabel.textAlignment = .center
@@ -104,7 +104,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
                 itsSpamLabel.text = "Spam"
                 itsSpamLabel.isUserInteractionEnabled = false
                 itsSpamLabel.textColor = Constants.textColor.hexToUiColor()
-                itsSpamLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                itsSpamLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.itsSpamButton?.addSubview(itsSpamLabel)
             }
             self.itsSpamArrow = UIImageView(frame: CGRect(x: itsSpamButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -131,7 +131,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
                 adultContentLabel.text = "Sexual or adult content"
                 adultContentLabel.isUserInteractionEnabled = false
                 adultContentLabel.textColor = Constants.textColor.hexToUiColor()
-                adultContentLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                adultContentLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.adultContentButton?.addSubview(adultContentLabel)
             }
             self.adultArrow = UIImageView(frame: CGRect(x: adultContentButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -158,7 +158,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
                 illegalContentLabel.text = "Illegal content or imagery"
                 illegalContentLabel.isUserInteractionEnabled = false
                 illegalContentLabel.textColor = Constants.textColor.hexToUiColor()
-                illegalContentLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                illegalContentLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.illegalContentButton?.addSubview(illegalContentLabel)
             }
             self.illegalArrow = UIImageView(frame: CGRect(x: illegalContentButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -185,7 +185,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
                 illegalServicesLabel.text = "Illegal products or services"
                 illegalServicesLabel.isUserInteractionEnabled = false
                 illegalServicesLabel.textColor = Constants.textColor.hexToUiColor()
-                illegalServicesLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                illegalServicesLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.illegalServicesButton?.addSubview(illegalServicesLabel)
             }
             self.illegalServicesArrow = UIImageView(frame: CGRect(x: illegalServicesButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -212,7 +212,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
                 hateSpeechLabel.text = "Hate speech or harassment"
                 hateSpeechLabel.isUserInteractionEnabled = false
                 hateSpeechLabel.textColor = Constants.textColor.hexToUiColor()
-                hateSpeechLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                hateSpeechLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.hateSpeechButton?.addSubview(hateSpeechLabel)
             }
             self.hateSpeechArrow = UIImageView(frame: CGRect(x: hateSpeechButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -239,7 +239,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
                 OtherLabel.text = "Other"
                 OtherLabel.isUserInteractionEnabled = false
                 OtherLabel.textColor = Constants.textColor.hexToUiColor()
-                OtherLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                OtherLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.OtherButton?.addSubview(OtherLabel)
             }
             self.OtherArrow = UIImageView(frame: CGRect(x: OtherButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -264,7 +264,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
             reportTextView.layer.cornerRadius = 12
             reportTextView.textContainerInset = UIEdgeInsets(top: 15, left: 15, bottom: 15, right: 15)
             reportTextView.textColor = UIColor.lightGray
-            reportTextView.font = UIFont(name: Constants.globalFont, size: 14)
+            reportTextView.font = UIFont(name: Constants.globalFont, size: 13)
             reportTextView.layer.shadowColor = UIColor.black.withAlphaComponent(0.3).cgColor
             reportTextView.layer.shadowOffset = CGSize(width: 0, height: 4)
             reportTextView.layer.shadowRadius = 12
@@ -279,7 +279,7 @@ class ReportPostsController: UIViewController, UITextViewDelegate {
             submitButton.layer.shadowOffset = CGSize(width: 4, height: 10)
             submitButton.layer.shadowOpacity = 0.5
             submitButton.layer.shadowRadius = 4
-            submitButton.titleLabel!.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            submitButton.titleLabel!.font = UIFont(name: Constants.globalFontBold, size: 13)
             submitButton.setTitle("Submit", for: .normal)
             submitButton.alpha = 0
             submitButton.titleLabel?.textColor = .white
@@ -407,4 +407,5 @@ extension ReportPostsController: PanModalPresentable {
     var anchorModalToLongForm: Bool {
         return false
     }
+
 }

@@ -58,23 +58,29 @@ class searchResultsTableViewCell: UITableViewCell {
     @IBOutlet weak var subTitleLabel: UILabel!
     @IBOutlet weak var arrButton: UIButton!
     
-    @IBOutlet weak var locationLabel: UILabel!
-    @IBOutlet weak var locationImage: UIImageView!
+//    @IBOutlet weak var locationLabel: UILabel!
+//    @IBOutlet weak var locationImage: UIImageView!
+    @IBOutlet weak var isFollowingLabel: UILabel!
+    @IBOutlet weak var removeButton: UIButton!
+    
+    @IBOutlet weak var brodieBanner: UIImageView!
+    
+    var parentVC: MapsViewController?
     var result = User(uid: "", username: "", profileImageUrl: "", bio: "", followingCount: 0, followersCount: 0, postsCount: 0, fullname: "", hasValidStory: false, isFollowing: false)
+    var cellIndex = -1
     func styleCell() {
         profilePicButton.setTitle("", for: .normal)
         arrButton.setTitle("", for: .normal)
+        let profXY = Int(12)
+        let profWid = Int(Int(self.contentView.frame.height) - (profXY*2))
         
-        let profWid = Int(self.contentView.frame.height - 32)
-        let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        titleLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        subTitleLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        titleLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        subTitleLabel.font = UIFont(name: Constants.globalFont, size: 12)
         
         let titleWidths = Int(Int(self.contentView.frame.width) - profXY - profWid - 10 - 30)
-        titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 17, width: titleWidths, height: 16)
-        subTitleLabel.frame = CGRect(x: titleLabel.frame.minX + 2, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        
         self.backgroundColor = .clear
         self.contentView.backgroundColor = .white
         self.contentView.layer.cornerRadius = 12
@@ -94,23 +100,84 @@ class searchResultsTableViewCell: UITableViewCell {
         
         arrButton.layer.cornerRadius = 12
         let arrWit = 30
-        arrButton.frame = CGRect(x: Int(self.contentView.frame.width) - arrWit - 15, y: 26, width: arrWit, height: arrWit)
-        
-        locationImage.frame = CGRect(x: titleLabel.frame.minX-1, y: subTitleLabel.frame.maxY+3, width: 10, height: 10)
-        locationImage.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
-        locationLabel.frame = CGRect(x: locationImage.frame.maxX + 3, y: locationImage.frame.minY - 2, width: self.contentView.frame.width - CGFloat(profWid) - 30, height: 14)
-        locationLabel.textColor = hexStringToUIColor(hex: Constants.primaryColor)
-        locationLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+        arrButton.frame = CGRect(x: Int(self.contentView.frame.width) - arrWit - 20, y: 26, width: arrWit, height: arrWit)
+        arrButton.center.y = self.contentView.frame.height / 2
+//        locationImage.frame = CGRect(x: titleLabel.frame.minX-1, y: subTitleLabel.frame.maxY+3, width: 10, height: 10)
+//        locationImage.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
+//        locationLabel.frame = CGRect(x: locationImage.frame.maxX + 3, y: locationImage.frame.minY - 2, width: self.contentView.frame.width - CGFloat(profWid) - 30, height: 14)
+//        locationLabel.textColor = hexStringToUIColor(hex: Constants.primaryColor)
+//        locationLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
         if result.profileImageUrl == "" {
             profilePicButton.image = UIImage(named: "no-profile-img.jpeg")
             print("* no profile pic, defaulting iamge")
         } else {
             downloadImage(with: result.profileImageUrl)
         }
-        
-        
-        
+        if result.isFollowing == true {
+            titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 12, width: titleWidths, height: 16)
+            subTitleLabel.frame = CGRect(x: titleLabel.frame.minX, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+            isFollowingLabel.isHidden = false
+            isFollowingLabel.frame = CGRect(x: subTitleLabel.frame.minX, y: subTitleLabel.frame.maxY + 2, width: CGFloat(titleWidths), height: 15)
+        } else {
+            titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 18, width: titleWidths, height: 16)
+            subTitleLabel.frame = CGRect(x: titleLabel.frame.minX, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+            isFollowingLabel.isHidden = true
+        }
+        removeButton.frame = arrButton.frame
+        removeButton.setTitle("", for: .normal)
+        if result.isRecentSearch == true {
+            arrButton.isHidden = true
+            removeButton.isHidden = false
+        } else {
+            arrButton.isHidden = false
+            removeButton.isHidden = true
+        }
+        if result.uid == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+            print("* brodieeee")
+            titleLabel.isHidden = true
+            subTitleLabel.isHidden = false
+            brodieBanner.isHidden = false
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 18, width: 50, height: 22)
+            subTitleLabel.frame = CGRect(x: titleLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: 15)
+            isFollowingLabel.isHidden = true
+            subTitleLabel.text = "@brodie"
+        } else {
+            titleLabel.isHidden = false
+            subTitleLabel.isHidden = false
+            brodieBanner.isHidden = true
+        }
 //        arrButton.center.y = self.contentView.center.y
+    }
+    @IBAction func removePressed(_ sender: Any) {
+        print("* remove pressed")
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        let defaults = UserDefaults.standard
+        if let recentSearches = defaults.data(forKey: "recent_searches") {
+            if let decodedArray = try? PropertyListDecoder().decode([User].self, from: recentSearches) {
+                var i = 0
+                for z in decodedArray {
+                    if z.uid == result.uid {
+                        print("* removing uid: \(result.uid) at index \((decodedArray.count - 1) - i)")
+                        var tmp = decodedArray
+                        tmp.remove(at: i)
+                        if let data = try? PropertyListEncoder().encode(tmp) {
+                            defaults.set(data, forKey: "recent_searches")
+                            
+                            parentVC?.searchResults = tmp.reversed()
+                            parentVC?.searchResultsTableView.deleteRows(at: [IndexPath(row: (decodedArray.count - 1) - i, section: 0)], with: .automatic)
+                            if tmp.count == 0 {
+                                parentVC?.searchResultsTableView.fadeOut()
+                                parentVC?.showNoRecent()
+                            }
+                            break
+                        }
+                    }
+                    i += 1
+                }
+            }
+        }
+        
     }
     func downloadImage(`with` urlString : String) {
         guard let url = URL.init(string: urlString) else {
@@ -222,12 +289,18 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "searchResultsTableViewCell", for: indexPath) as! searchResultsTableViewCell
-        let res = searchResults[indexPath.row]
+        var res = searchResults[indexPath.row]
         cell.result = res
+        cell.parentVC = self
+        cell.cellIndex = indexPath.row
         cell.titleLabel.text = res.fullname
         cell.subTitleLabel.text = res.username
-        cell.locationLabel.text = res.location ?? "No location"
+        cell.styleCell()
+//        cell.locationLabel.text = res.location ?? "No location"
         cell.selectionStyle = .none
+        if res.isRecentSearch == true {
+            res.hasValidStory = false
+        }
         if res.hasValidStory {
             print("* valid story")
             cell.profilePicButton.isUserInteractionEnabled = true
@@ -240,8 +313,54 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         return cell
     }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
         if indexPath.row < searchResults.count {
             openProfileForUser(withUID: searchResults[indexPath.row].uid)
+        }
+//        if searchResults[indexPath.row].isRecentSearch == fasle { styleForRecentSearches()
+        if let recentSearches = defaults.data(forKey: "recent_searches") {
+            print("* recent_searches: \(recentSearches)")
+            if let decodedArray = try? PropertyListDecoder().decode([User].self, from: recentSearches) {
+                print("* got decoded user array, appending")
+                var newArr = decodedArray
+                var isIn = false
+                var indexOfAlreadyExistingUID = -1
+                var num = 0
+                for i in newArr {
+                    if i.uid == searchResults[indexPath.row].uid {
+                        isIn = true
+                        indexOfAlreadyExistingUID = num
+                    }
+                    num += 1
+                }
+                if newArr.count > 25 {
+                    newArr.remove(at: 0)
+                }
+                if isIn == false {
+                    newArr.append(searchResults[indexPath.row])
+                    if let data = try? PropertyListEncoder().encode(newArr) {
+                        defaults.set(data, forKey: "recent_searches")
+                    }
+                } else {
+                    print("* placing it at the front")
+                    newArr.remove(at: indexOfAlreadyExistingUID)
+                    newArr.append(searchResults[indexPath.row])
+                    if let data = try? PropertyListEncoder().encode(newArr) {
+                        defaults.set(data, forKey: "recent_searches")
+                    }
+                    if searchResults[indexPath.row].isRecentSearch == true {
+                        styleForRecentSearches()
+                    }
+                }
+                
+            }
+            
+        } else {
+            print("* recent searches is nill, setting new")
+            if let data = try? PropertyListEncoder().encode([searchResults[indexPath.row]]) {
+                defaults.set(data, forKey: "recent_searches")
+            }
         }
         
     }
@@ -260,7 +379,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     let locationManager = CLLocationManager()
     let regionRadius: CLLocationDistance = 2500
     
-    @IBOutlet weak var mapView: MKMapView!
+//    @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var searchBar: UITextField!
     @IBOutlet weak var magnifyingGlassImage: UIImageView!
     @IBOutlet weak var gradientView: UIView!
@@ -269,6 +388,9 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     @IBOutlet weak var currentLocationLabel: UILabel!
     
     @IBOutlet weak var searchResultsTableView: UITableView!
+    
+    @IBOutlet weak var noRecentSearchesLabel: UILabel!
+    @IBOutlet weak var clearButton: UIButton!
     
     var searchResults: [User] = []
     
@@ -296,8 +418,12 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     var searchTimer: Timer?
     override func viewDidLoad() {
         super.viewDidLoad()
+        reloadEverything()
         
+    }
+    func reloadEverything() {
         self.view.backgroundColor = hexStringToUIColor(hex: "#f5f5f5")
+        
         searchBar.styleSearchBar()
         searchBar.frame = CGRect(x: 20, y: 70, width: UIScreen.main.bounds.width - 40, height: 50)
         gradientView.frame = CGRect(x: 0, y: searchBar.frame.maxY+60, width: UIScreen.main.bounds.width, height: 250)
@@ -306,8 +432,8 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         peepAndEventNearYouLabel.frame = CGRect(x: 0, y: searchBar.frame.maxY+20, width: UIScreen.main.bounds.width, height: 20)
         currentLocationLabel.frame = CGRect(x: 0, y: peepAndEventNearYouLabel.frame.maxY + 5, width: UIScreen.main.bounds.width, height: 20)
         
-        peepAndEventNearYouLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
-        currentLocationLabel.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+        peepAndEventNearYouLabel.font = UIFont(name: Constants.globalFontBold, size: 15)
+        currentLocationLabel.font = UIFont(name: Constants.globalFont, size: 13)
         if isMinimalEnabled {
             peepAndEventNearYouLabel.isHidden = true
             gradientView.frame = CGRect(x: 0, y: searchBar.frame.maxY+40, width: UIScreen.main.bounds.width, height: 150)
@@ -319,79 +445,40 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         }
         BottomgradientView.frame = CGRect(x: 0, y: UIScreen.main.bounds.height - 200, width: UIScreen.main.bounds.width, height: 200)
         magnifyingGlassImage.frame = CGRect(x: searchBar.frame.minX + 15, y: searchBar.frame.minY + 15, width: 20, height: 20)
-        searchBar.font = UIFont(name: "\(Constants.globalFont)", size: 15)
+        searchBar.font = UIFont(name: Constants.globalFont, size: 14)
         searchBar.textColor = .darkGray
         hideKeyboardWhenTappedAround()
         searchBar.delegate = self
         // handle the editingChanged event by calling (textFieldDidEditingChanged(-:))
         self.searchBar.addTarget(self, action: #selector(textFieldDidEditingChanged(_:)), for: .editingChanged)
         
-        //        configureTileOverlay()
-        mapView.frame = CGRect(x: 0, y: searchBar.frame.maxY + 50, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height - (searchBar.frame.maxY + 10))
-        mapView.delegate = self
+
         if #available(iOS 13.0, *) {
             self.overrideUserInterfaceStyle = .light
         }
-        if currentLocationAccess() == .authorizedWhenInUse || currentLocationAccess() == .authorizedAlways {
-            styleMap()
-        } else {
-            print("* damn we aint got access bre")
-            // Disable location features
-            let alert = UIAlertController(title: "Allow Location Access", message: "To find people and events near you, we need access to your location. Turn on Location Services in your device settings.", preferredStyle: UIAlertController.Style.alert)
-            
-            // Button to Open Settings
-            alert.addAction(UIAlertAction(title: "Settings", style: UIAlertAction.Style.default, handler: { action in
-                guard let settingsUrl = URL(string: UIApplication.openSettingsURLString) else {
-                    return
-                }
-                if UIApplication.shared.canOpenURL(settingsUrl) {
-                    UIApplication.shared.open(settingsUrl, completionHandler: { (success) in
-                        print("Settings opened: \(success)")
-                    })
-                }
-            }))
-            alert.addAction(UIAlertAction(title: "Ok", style: UIAlertAction.Style.default, handler: nil))
-            self.present(alert, animated: true, completion: nil)
-        }
-        
-        mapView.delegate = self
+
         if Constants.isDebugEnabled {
-//            var window : UIWindow = UIApplication.shared.keyWindow!
-//            window.showDebugMenu()
             self.view.debuggingStyle = true
         }
         searchResultsTableView.delegate = self
         searchResultsTableView.dataSource = self
         searchResultsTableView.backgroundColor = .clear
         searchResultsTableView.frame = CGRect(x: 10, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 20, height: UIScreen.main.bounds.height - searchBar.frame.maxY)
-        searchResultsTableView.rowHeight = 90
+        searchResultsTableView.rowHeight = 80
         searchResultsTableView.separatorStyle = .none
         
         
-        
+        styleForRecentSearches()
         GADMobileAds.sharedInstance().requestConfiguration.testDeviceIdentifiers = [ "21fc2c59a4644776134ea95a8a67a320" ]
         let multipleAdsOptions = GADMultipleAdsAdLoaderOptions()
         multipleAdsOptions.numberOfAds = 2
         
-        adLoader = GADAdLoader(adUnitID: mapsAdUnit,
-            rootViewController: self,
-            adTypes: [ .native ],
-            options: [multipleAdsOptions])
-        adLoader.delegate = self
-        adLoader.load(GADRequest())
-    }
-    func addPinUsing(location: CLLocationCoordinate2D, name: String, username: String, uid: String, imageUrl: String, type: String) {
-        if type == "user" {
-            let pin = MapPin(title: String(name.split(separator: " ")[0]).replacingOccurrences(of: " ", with: ""), locationName: "", coordinate: location, imageUrl: imageUrl, uid: uid, username: username, type: type)
-            mapView.addAnnotations([pin])
-        } else if type == "group" {
-            let pin = MapPin(title: name, locationName: "", coordinate: location, imageUrl: imageUrl, uid: uid, username: username, type: type)
-            mapView.addAnnotations([pin])
-        } else if type == "event" {
-            let pin = MapPin(title: name, locationName: "", coordinate: location, imageUrl: imageUrl, uid: uid, username: username, type: type)
-            mapView.addAnnotations([pin])
-        }
-        
+//        adLoader = GADAdLoader(adUnitID: mapsAdUnit,
+//            rootViewController: self,
+//            adTypes: [ .native ],
+//            options: [multipleAdsOptions])
+//        adLoader.delegate = self
+//        adLoader.load(GADRequest())
     }
     let interactor = Interactor()
 
@@ -400,19 +487,6 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
             destinationViewController.transitioningDelegate = self
             destinationViewController.interactor = interactor
         }
-    }
-    func styleMap() {
-        let darkLayer = CALayer()
-        darkLayer.frame = self.view.bounds
-        darkLayer.compositingFilter = "colorBlendMode"
-        darkLayer.backgroundColor = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0).cgColor
-        
-        let newLightFilter = CIFilter(name: "CIColorMonochrome")
-//        self.mapView.layer.addSublayer(darkLayer)
-        //        mapView.mapType = .mu
-        mapView.alpha = 1
-        mapView.pointOfInterestFilter = .some(MKPointOfInterestFilter(including: []))
-        centerMapOnLocation(location: locationManager.location!)
     }
     func nextChar(str:String) -> String {
         var ret = ""
@@ -429,155 +503,155 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     }
     func centerMapOnLocation(location: CLLocation)
     {
-        let geocoder = CLGeocoder()
-        geocoder.reverseGeocodeLocation(location) { [weak self] (placemarks, error) in
-            if error == nil {
-                if let firstLocation = placemarks?[0], let cityName = firstLocation.locality, let stateName = firstLocation.administrativeArea, let countryName = firstLocation.country { // get the city name
-                    self?.locationManager.stopUpdatingLocation()
-                    print("* got user city: \(cityName)")
-                    self?.defaults.set(cityName, forKey: "city")
-                    self?.defaults.set(stateName, forKey: "state")
-                    self?.defaults.set(countryName, forKey: "country")
-                    self?.getUsersInHomeTown()
-                    DispatchQueue.main.async {
-                        self?.currentLocationLabel.text = "\(cityName), \(stateName)"
-                        
-                        if self?.defaults.object(forKey: "last-update-location") != nil {
-                            let datee = self?.defaults.date(forKey: "last-update-location")
-                            let diffInDays = Calendar.current.dateComponents([.day], from: datee ?? Date(), to: Date()).day
-                            if diffInDays! >= 6 {
-                                print("* difference in days is >= 6, updating")
-                                FirebaseAnalytics.Analytics.logEvent("updated_location", parameters: [AnalyticsParameterScreenName: "map_view"])
-                                self?.updateFirestoreLocation(city: cityName, state: stateName, country: countryName)
-                                self?.defaults.set(date: Date(), forKey: "last-update-location")
-                            } else {
-                                print("* it has been \(diffInDays) days since location updated, wait")
-                            }
-                        } else {
-                            self?.defaults.set(date: Date(), forKey: "last-update-location")
-                            print("* last-update-location not set, set \(Date()) as new value")
-                            FirebaseAnalytics.Analytics.logEvent("init_location", parameters: [AnalyticsParameterScreenName: "map_view"])
-                            self?.updateFirestoreLocation(city: cityName, state: stateName, country: countryName)
-                        }
-                    }
-                    
-                }
-            }
-        }
-        let coordinateRegion = MKCoordinateRegion(center: location.coordinate,
-                                                  latitudinalMeters: regionRadius * 2.0, longitudinalMeters: regionRadius * 2.0)
-        mapView.setRegion(coordinateRegion, animated: true)
+//        let geocoder = CLGeocoder()
+//        geocoder.reverseGeocodeLocation(location) { [weak self] (placemarks, error) in
+//            if error == nil {
+//                if let firstLocation = placemarks?[0], let cityName = firstLocation.locality, let stateName = firstLocation.administrativeArea, let countryName = firstLocation.country { // get the city name
+//                    self?.locationManager.stopUpdatingLocation()
+//                    print("* got user city: \(cityName)")
+//                    self?.defaults.set(cityName, forKey: "city")
+//                    self?.defaults.set(stateName, forKey: "state")
+//                    self?.defaults.set(countryName, forKey: "country")
+//                    self?.getUsersInHomeTown()
+//                    DispatchQueue.main.async {
+//                        self?.currentLocationLabel.text = "\(cityName), \(stateName)"
+//
+//                        if self?.defaults.object(forKey: "last-update-location") != nil {
+//                            let datee = self?.defaults.date(forKey: "last-update-location")
+//                            let diffInDays = Calendar.current.dateComponents([.day], from: datee ?? Date(), to: Date()).day
+//                            if diffInDays! >= 6 {
+//                                print("* difference in days is >= 6, updating")
+//                                FirebaseAnalytics.Analytics.logEvent("updated_location", parameters: [AnalyticsParameterScreenName: "map_view"])
+//                                self?.updateFirestoreLocation(city: cityName, state: stateName, country: countryName)
+//                                self?.defaults.set(date: Date(), forKey: "last-update-location")
+//                            } else {
+//                                print("* it has been \(diffInDays) days since location updated, wait")
+//                            }
+//                        } else {
+//                            self?.defaults.set(date: Date(), forKey: "last-update-location")
+//                            print("* last-update-location not set, set \(Date()) as new value")
+//                            FirebaseAnalytics.Analytics.logEvent("init_location", parameters: [AnalyticsParameterScreenName: "map_view"])
+//                            self?.updateFirestoreLocation(city: cityName, state: stateName, country: countryName)
+//                        }
+//                    }
+//
+//                }
+//            }
+//        }
+//        let coordinateRegion = MKCoordinateRegion(center: location.coordinate,
+//                                                  latitudinalMeters: regionRadius * 2.0, longitudinalMeters: regionRadius * 2.0)
+//        mapView.setRegion(coordinateRegion, animated: true)
     }
     func getUsersInHomeTown() {
-        let city = defaults.string(forKey: "city")!
-        let state = defaults.string(forKey: "state")!
-        let country = defaults.string(forKey: "country")!
-        let user = Auth.auth().currentUser?.uid
-        
-        let locationsRef = db.collection("user-locations")
-        print("* finding users without id \(user! as! String)")
-        locationsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).whereField("uid", isNotEqualTo: user! ?? "").limit(to: 10).getDocuments() { (querySnapshot, err) in
-            if let err = err {
-                print("Error getting documents: \(err)")
-            } else {
-                
-                if querySnapshot!.isEmpty {
-                    print("* no users near by")
-                } else {
-                    for document in querySnapshot!.documents {
-//                        print("* got user near by: \(document.documentID) => \(document.data())")
-                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)).coordinate
-                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
-                        let fullName = document.data()["full_name"] as? String ?? ""
-                        print("* got user near by: \(document.documentID) => \(fullName)")
-                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "user")
-                        
-                    }
-                    self.locationManager.stopUpdatingLocation()
-                }
-                
-            }
-        }
+//        let city = defaults.string(forKey: "city")!
+//        let state = defaults.string(forKey: "state")!
+//        let country = defaults.string(forKey: "country")!
+//        let user = Auth.auth().currentUser?.uid
+//
+//        let locationsRef = db.collection("user-locations")
+//        print("* finding users without id \(user! as! String)")
+//        locationsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).whereField("uid", isNotEqualTo: user! ?? "").limit(to: 10).getDocuments() { (querySnapshot, err) in
+//            if let err = err {
+//                print("Error getting documents: \(err)")
+//            } else {
+//
+//                if querySnapshot!.isEmpty {
+//                    print("* no users near by")
+//                } else {
+//                    for document in querySnapshot!.documents {
+////                        print("* got user near by: \(document.documentID) => \(document.data())")
+//                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)).coordinate
+//                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
+//                        let fullName = document.data()["full_name"] as? String ?? ""
+//                        print("* got user near by: \(document.documentID) => \(fullName)")
+////                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "user")
+//
+//                    }
+//                    self.locationManager.stopUpdatingLocation()
+//                }
+//
+//            }
+//        }
     }
     func getUsersAndEventsInHomeTown() {
-        let city = defaults.string(forKey: "city")!
-        let state = defaults.string(forKey: "state")!
-        let country = defaults.string(forKey: "country")!
-        let user = Auth.auth().currentUser?.uid
-        
-        let locationsRef = db.collection("user-locations")
-        print("* finding users without id \(user! as! String)")
-        locationsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).whereField("uid", isNotEqualTo: user! ?? "").limit(to: 10).getDocuments() { (querySnapshot, err) in
-            if let err = err {
-                print("Error getting documents: \(err)")
-            } else {
-                
-                if querySnapshot!.isEmpty {
-                    print("* no users near by")
-                } else {
-                    for document in querySnapshot!.documents {
-//                        print("* got user near by: \(document.documentID) => \(document.data())")
-                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)).coordinate
-                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
-                        let fullName = document.data()["full_name"] as? String ?? ""
-                        print("* got user near by: \(document.documentID) => \(fullName)")
-                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "user")
-                        
-                    }
-                    self.locationManager.stopUpdatingLocation()
-                }
-                
-            }
-        }
-        let groupsRef = db.collection("groups")
-        
-        groupsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).order(by: "members_count", descending: true).limit(to: 3).getDocuments() { (querySnapshot, err) in
-            if let err = err {
-                print("Error getting documents: \(err)")
-            } else {
-                
-                if querySnapshot!.isEmpty {
-                    print("* no groups near by")
-                } else {
-                    for document in querySnapshot!.documents {
-                        
-                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))).coordinate
-                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
-                        let fullName = document.data()["name"] as? String ?? ""
-                        print("* got group near by: \(document.documentID) => \(fullName)")
-                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "group")
-                        
-                    }
-                    self.locationManager.stopUpdatingLocation()
-                }
-                
-            }
-        }
-        
-        let eventsRef = db.collection("events")
-        
-        eventsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).order(by: "num_people_going", descending: true).limit(to: 3).getDocuments() { (querySnapshot, err) in
-            if let err = err {
-                print("Error getting documents: \(err)")
-            } else {
-                
-                if querySnapshot!.isEmpty {
-                    print("* no groups near by")
-                } else {
-                    for document in querySnapshot!.documents {
-//                        print("* got group near by: \(document.documentID) => \(document.data())")
-                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))).coordinate
-                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
-                        let fullName = document.data()["name"] as? String ?? ""
-                        print("* got event near by: \(document.documentID) => \(fullName)")
-                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "event")
-                        
-                    }
-                    self.locationManager.stopUpdatingLocation()
-                }
-                
-            }
-        }
+//        let city = defaults.string(forKey: "city")!
+//        let state = defaults.string(forKey: "state")!
+//        let country = defaults.string(forKey: "country")!
+//        let user = Auth.auth().currentUser?.uid
+//
+//        let locationsRef = db.collection("user-locations")
+//        print("* finding users without id \(user! as! String)")
+//        locationsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).whereField("uid", isNotEqualTo: user! ?? "").limit(to: 10).getDocuments() { (querySnapshot, err) in
+//            if let err = err {
+//                print("Error getting documents: \(err)")
+//            } else {
+//
+//                if querySnapshot!.isEmpty {
+//                    print("* no users near by")
+//                } else {
+//                    for document in querySnapshot!.documents {
+////                        print("* got user near by: \(document.documentID) => \(document.data())")
+//                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius) - 500), andBig: Double(self.regionRadius) - 500)).coordinate
+//                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
+//                        let fullName = document.data()["full_name"] as? String ?? ""
+//                        print("* got user near by: \(document.documentID) => \(fullName)")
+////                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "user")
+//
+//                    }
+//                    self.locationManager.stopUpdatingLocation()
+//                }
+//
+//            }
+//        }
+//        let groupsRef = db.collection("groups")
+//
+//        groupsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).order(by: "members_count", descending: true).limit(to: 3).getDocuments() { (querySnapshot, err) in
+//            if let err = err {
+//                print("Error getting documents: \(err)")
+//            } else {
+//
+//                if querySnapshot!.isEmpty {
+//                    print("* no groups near by")
+//                } else {
+//                    for document in querySnapshot!.documents {
+//
+//                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))).coordinate
+//                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
+//                        let fullName = document.data()["name"] as? String ?? ""
+//                        print("* got group near by: \(document.documentID) => \(fullName)")
+////                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "group")
+//
+//                    }
+//                    self.locationManager.stopUpdatingLocation()
+//                }
+//
+//            }
+//        }
+//
+//        let eventsRef = db.collection("events")
+//
+//        eventsRef.whereField("city", isEqualTo: city).whereField("state", isEqualTo: state).whereField("country", isEqualTo: country).order(by: "num_people_going", descending: true).limit(to: 3).getDocuments() { (querySnapshot, err) in
+//            if let err = err {
+//                print("Error getting documents: \(err)")
+//            } else {
+//
+//                if querySnapshot!.isEmpty {
+//                    print("* no groups near by")
+//                } else {
+//                    for document in querySnapshot!.documents {
+////                        print("* got group near by: \(document.documentID) => \(document.data())")
+//                        let randomLocation = self.locationManager.location!.movedBy(latitudinalMeters: (self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))), longitudinalMeters: self.randomFloatBetween(-( Double(self.regionRadius)), andBig: Double(self.regionRadius))).coordinate
+//                        let profileImage = document.data()["profileImageURL"] as? String ?? "https://qph.cf2.quoracdn.net/main-qimg-2b21b9dd05c757fe30231fac65b504dd"
+//                        let fullName = document.data()["name"] as? String ?? ""
+//                        print("* got event near by: \(document.documentID) => \(fullName)")
+////                        self.addPinUsing(location: randomLocation, name: fullName, username: "\(document.data()["username"] as? String ?? "")", uid: "\(document.data()["uid"] as? String ?? "")", imageUrl: profileImage, type: "event")
+//
+//                    }
+//                    self.locationManager.stopUpdatingLocation()
+//                }
+//
+//            }
+//        }
     }
     private func randomFloatBetween(_ smallNumber: Double, andBig bigNumber: Double) -> Double {
         let diff: Double = bigNumber - smallNumber
@@ -609,58 +683,76 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
     func searchWith(term: String) {
         let usersRef = db.collection("user-locations")
         searchResults.removeAll()
-        let userID = Auth.auth().currentUser?.uid
-        let end = "\(term.dropLast())\(nextChar(str: "\(term.last!)"))"
-        //            .whereField("username", isLessThan: "\(term.dropLast())\(nextChar(str: "\(term.last!)"))")
-        usersRef.whereField("username", isGreaterThanOrEqualTo: term.lowercased()).whereField("username", isLessThan: end).limit(to: 10).getDocuments() { (querySnapshot, err) in
-            if let err = err {
-                print("Error getting documents: \(err)")
-            } else {
-                
-                if querySnapshot!.isEmpty {
-                    print("* detected empty feed")
+        let userID = (Auth.auth().currentUser?.uid)
+        if let userID = userID {
+            let end = "\(term.dropLast())\(nextChar(str: "\(term.last!)"))"
+            //            .whereField("username", isLessThan: "\(term.dropLast())\(nextChar(str: "\(term.last!)"))")
+            usersRef.whereField("username", isGreaterThanOrEqualTo: term.lowercased()).whereField("username", isLessThan: end).limit(to: 10).getDocuments() { (querySnapshot, err) in
+                if let err = err {
+                    print("Error getting documents: \(err)")
                 } else {
-                    for document in querySnapshot!.documents {
-                        print("* got user search results: \(document.documentID) => \(document.data())")
-                        let postVals = document.data() as? [String: Any]
-                        let userUID = postVals?["uid"] as? String ?? ""
-                        let username = postVals?["username"] as? String ?? ""
-                        let profileImageUrl = postVals?["profileImageURL"] as? String ?? ""
-                        let full_name = postVals?["full_name"] as? String ?? ""
-                        var locationString = "No location"
-                        if postVals?["city"] != nil {
-                            if postVals?["state"] != nil {
-                                locationString = "\(postVals?["city"] as! String), \(postVals?["state"] as! String)"
-                            }
-                        }
-                        var isValidStory = false
-                        if postVals?["latest_story_timestamp"] != nil {
-                            print("* user has a recent story: \(postVals?["latest_story_timestamp"])")
-                            if let timestamp: Timestamp = postVals?["latest_story_timestamp"] as? Timestamp {
-                                let story_date: Date = timestamp.dateValue()
-                                let timeToLive: TimeInterval = 60 * 60 * 24 // 60 seconds * 60 minutes * 24 hours
-                                print("* time since (hours): \(Date().timeIntervalSince(story_date))")
-                                let isExpired = Date().timeIntervalSince(story_date) >= timeToLive
-                                if isExpired != true {
-                                    print("* valid story!")
-                                    isValidStory = true
+                    
+                    if querySnapshot!.isEmpty {
+                        print("* detected empty feed")
+                    } else {
+                        let mainPostDispatchQueue = DispatchGroup()
+                        for document in querySnapshot!.documents {
+                            print("* got user search results: \(document.documentID) => \(document.data())")
+                            let postVals = document.data() as? [String: Any]
+                            let userUID = postVals?["uid"] as? String ?? ""
+                            let username = postVals?["username"] as? String ?? ""
+                            let profileImageUrl = postVals?["profileImageURL"] as? String ?? ""
+                            let full_name = postVals?["full_name"] as? String ?? ""
+                            var locationString = "No location"
+                            if postVals?["city"] != nil {
+                                if postVals?["state"] != nil {
+                                    locationString = "\(postVals?["city"] as! String), \(postVals?["state"] as! String)"
                                 }
                             }
-                            
+                            var isValidStory = false
+                            if postVals?["latest_story_timestamp"] != nil {
+                                print("* user has a recent story: \(postVals?["latest_story_timestamp"])")
+                                if let timestamp: Timestamp = postVals?["latest_story_timestamp"] as? Timestamp {
+                                    let story_date: Date = timestamp.dateValue()
+                                    let timeToLive: TimeInterval = 60 * 60 * 24 // 60 seconds * 60 minutes * 24 hours
+                                    print("* time since (hours): \(Date().timeIntervalSince(story_date))")
+                                    let isExpired = Date().timeIntervalSince(story_date) >= timeToLive
+                                    if isExpired != true {
+                                        print("* valid story!")
+                                        isValidStory = true
+                                    }
+                                }
+                                
+                            }
+                            mainPostDispatchQueue.enter()
+                            var userResult = User(uid: userUID, username: username, profileImageUrl: profileImageUrl, bio: "", followingCount: 0, followersCount: 0, postsCount: 0, fullname: full_name, hasValidStory: isValidStory, isFollowing: false)
+                            self.db.collection("following").document(userID).collection("sub-following").document(userUID).getDocument { (document, err) in
+                                if ((document?.exists) != nil) && document?.exists == true {
+                                    print("* current user is following user")
+                                    userResult.isFollowing = true
+                                } else {
+                                    print("* current user has not followed user [snap empty]")
+                                    userResult.isFollowing = false
+                                }
+                                self.searchResults.append(userResult)
+                                mainPostDispatchQueue.leave()
+                            }
+                            mainPostDispatchQueue.notify(queue: .main) {
+                                self.searchResults = self.searchResults.removeDuplicates()
+                                self.searchResultsTableView.reloadData()
+                            }
+                           
+    //                        if document == querySnapshot!.documents.last {
+    //                            self.searchResultsTableView.reloadData()
+    //                        }
                         }
-//                        let latest_story_timestamp =
-                        var userResult = User(uid: userUID, username: username, profileImageUrl: profileImageUrl, bio: "", followingCount: 0, followersCount: 0, postsCount: 0, fullname: full_name, hasValidStory: isValidStory, isFollowing: false)
-                        userResult.location = locationString
-                        self.searchResults.append(userResult)
-                        if document == querySnapshot!.documents.last {
-                            self.searchResultsTableView.reloadData()
-                        }
+                        
                     }
                     
                 }
-                
             }
         }
+        
     }
     // reset the searchTimer whenever the textField is editingChanged
     @objc func textFieldDidEditingChanged(_ textField: UITextField) {
@@ -672,9 +764,51 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         }
         
         // reschedule the search: in 1.0 second, call the searchForKeyword method on the new textfield content
-        searchTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(searchForKeyword(_:)), userInfo: textField.text!, repeats: false)
-    }
+//        searchTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(searchForKeyword(_:)), userInfo: textField.text!, repeats: false)
+        search(keyword: textField.text ?? "")
     
+    }
+    func search(keyword: String) {
+        print("Searching for keyword \(keyword)")
+        if keyword as! String != "" {
+//            mapView.fadeOut()
+            if searchResultsTableView.alpha == 0  || searchResultsTableView.isHidden == true {
+                searchResultsTableView.fadeIn()
+            }
+            
+            Analytics.logEvent("search_for_user", parameters: nil)
+            if noRecentSearchesLabel.alpha == 1 || noRecentSearchesLabel.isHidden == false {
+                noRecentSearchesLabel.fadeOut()
+            }
+            if searchResultsTableView.frame != CGRect(x: 10, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 20, height: UIScreen.main.bounds.height - searchBar.frame.maxY) {
+                searchResultsTableView.frame = CGRect(x: 10, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 20, height: UIScreen.main.bounds.height - searchBar.frame.maxY)
+            }
+            gradientView.frame = CGRect(x: 0, y: searchBar.frame.maxY+40, width: UIScreen.main.bounds.width, height: 150)
+            clearButton.isHidden = true
+            self.searchResultsTableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+            if searchResults.count != 0 {
+                if searchResults[0].isRecentSearch == true {
+                    self.searchResults.removeAll()
+                    self.searchResultsTableView.reloadData()
+                }
+            }
+            gradientView.isHidden = true
+            searchWith(term: keyword )
+        } else {
+            searchResultsTableView.reloadData()
+//            mapView.fadeIn()
+            print("* no search result, show recent searches instead")
+            
+            searchResultsTableView.fadeOut()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { // Change `2.0` to the desired number of seconds.
+               // Code you want to be delayed
+                self.styleForRecentSearches()
+                self.gradientView.isHidden = false
+            }
+            
+        }
+    }
     @objc func searchForKeyword(_ timer: Timer) {
         
         // retrieve the keyword from user info
@@ -682,61 +816,111 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
         
         print("Searching for keyword \(keyword)")
         if keyword as! String != "" {
-            mapView.fadeOut()
+//            mapView.fadeOut()
             if searchResultsTableView.alpha == 0  || searchResultsTableView.isHidden == true {
                 searchResultsTableView.fadeIn()
             }
             
             Analytics.logEvent("search_for_user", parameters: nil)
+            if noRecentSearchesLabel.alpha == 1 || noRecentSearchesLabel.isHidden == false {
+                noRecentSearchesLabel.fadeOut()
+            }
+            if searchResultsTableView.frame != CGRect(x: 10, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 20, height: UIScreen.main.bounds.height - searchBar.frame.maxY) {
+                searchResultsTableView.frame = CGRect(x: 10, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 20, height: UIScreen.main.bounds.height - searchBar.frame.maxY)
+            }
+            gradientView.frame = CGRect(x: 0, y: searchBar.frame.maxY+40, width: UIScreen.main.bounds.width, height: 150)
+            clearButton.isHidden = true
+            self.searchResultsTableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+            if searchResults.count != 0 {
+                if searchResults[0].isRecentSearch == true {
+                    self.searchResults.removeAll()
+                    self.searchResultsTableView.reloadData()
+                }
+            }
+            gradientView.isHidden = true
             searchWith(term: keyword as! String)
         } else {
             searchResultsTableView.reloadData()
-            mapView.fadeIn()
+//            mapView.fadeIn()
+            print("* no search result, show recent searches instead")
+            
             searchResultsTableView.fadeOut()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { // Change `2.0` to the desired number of seconds.
+               // Code you want to be delayed
+                self.styleForRecentSearches()
+                self.gradientView.isHidden = false
+            }
+            
         }
         
     }
-    func currentLocationAccess() -> CLAuthorizationStatus {
-        return CLLocationManager.authorizationStatus()
-    }
-    func checkUsersLocationServicesAuthorization() {
-        /// Check if user has authorized Total Plus to use Location Services
-        if CLLocationManager.locationServicesEnabled() {
-            switch CLLocationManager.authorizationStatus() {
-            case .notDetermined:
-                // Request when-in-use authorization initially
-                // This is the first and the ONLY time you will be able to ask the user for permission
-                print("* unknown location authorization")
-                self.locationManager.delegate = self
-                locationManager.requestWhenInUseAuthorization()
-                break
-                
-            case .restricted, .denied:
-                // Disable location features
-                let alert = UIAlertController(title: "Allow Location Access", message: "To find people and events near you, we need access to your location. Turn on Location Services in your device settings.", preferredStyle: UIAlertController.Style.alert)
-                
-                // Button to Open Settings
-                alert.addAction(UIAlertAction(title: "Settings", style: UIAlertAction.Style.default, handler: { action in
-                    guard let settingsUrl = URL(string: UIApplication.openSettingsURLString) else {
-                        return
-                    }
-                    if UIApplication.shared.canOpenURL(settingsUrl) {
-                        UIApplication.shared.open(settingsUrl, completionHandler: { (success) in
-                            print("Settings opened: \(success)")
-                        })
-                    }
-                }))
-                alert.addAction(UIAlertAction(title: "Ok", style: UIAlertAction.Style.default, handler: nil))
-                self.present(alert, animated: true, completion: nil)
-                
-                break
-                
-            case .authorizedWhenInUse, .authorizedAlways:
-                // Enable features that require location services here.
-                print("Full Access to location")
-                break
+    func styleForRecentSearches() {
+        let userDefaults = UserDefaults.standard
+        if let recentSearches = userDefaults.data(forKey: "recent_searches") {
+            print("* found recent searches")
+            if let decodedArray = try? PropertyListDecoder().decode([User].self, from: recentSearches) {
+                var tmp = decodedArray
+                var i = 0
+                for z in tmp {
+                    tmp[i].isRecentSearch = true
+                    i += 1
+                }
+                self.searchResults = tmp.reversed()
+                self.searchResultsTableView.reloadData()
+                self.searchResultsTableView.fadeIn()
+                noRecentSearchesLabel.text = "Recent"
+                noRecentSearchesLabel.font = UIFont(name: Constants.globalFontBold, size: 15)
+                noRecentSearchesLabel.textAlignment = .left
+                noRecentSearchesLabel.frame = CGRect(x: 30, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 60, height: 30)
+                searchResultsTableView.frame = CGRect(x: searchResultsTableView.frame.minX, y: noRecentSearchesLabel.frame.maxY, width: searchResultsTableView.frame.width, height: UIScreen.main.bounds.height - searchBar.frame.height - 200)
+//                gradientView.frame = CGRect(x: 0, y: searchBar.frame.maxY+40, width: UIScreen.main.bounds.width, height: 150)
+                self.searchResultsTableView.contentInset = UIEdgeInsets(top: 20, left: 0, bottom: 0, right: 0)
+                let indexPath = IndexPath(row: 0, section: 0)
+                        self.searchResultsTableView.scrollToRow(at: indexPath, at: .top, animated: true)
+                gradientView.frame = CGRect(x: 0, y: searchResultsTableView.frame.minY, width: UIScreen.main.bounds.width, height: 50)
+                gradientView.isHidden = false
+//                gradientView.layer.borderColor = UIColor.red.cgColor
+//                gradientView.layer.borderWidth = 2
+        //            noRecentSearchesLabel.sizeToFit()
+                noRecentSearchesLabel.fadeIn()
+                clearButton.setTitle("Clear", for: .normal)
+                clearButton.backgroundColor = .lightGray.withAlphaComponent(0.15)
+                clearButton.tintColor = .darkGray.withAlphaComponent(0.6)
+                clearButton.setTitleColor(.darkGray.withAlphaComponent(0.6), for: .normal)
+                clearButton.clipsToBounds = true
+                clearButton.layer.cornerRadius = 12
+                let clearWid = 60
+                clearButton.frame = CGRect(x: Int(UIScreen.main.bounds.width) - clearWid - 20, y: 0, width: clearWid, height: 25)
+                clearButton.center.y = noRecentSearchesLabel.center.y
+                clearButton.isHidden = false
+            } else {
+                showNoRecent()
             }
+        } else {
+            showNoRecent()
         }
+    }
+    @IBAction func clearPressed(_ sender: Any) {
+        print("* clear pressed")
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        defaults.removeObject(forKey: "recent_searches")
+        searchResultsTableView.fadeOut()
+        searchResults.removeAll()
+        searchResultsTableView.reloadData()
+        showNoRecent()
+    }
+    func showNoRecent() {
+        print("* no recent searches, showing 'no recent searches'")
+        noRecentSearchesLabel.text = "No recent searches 😞"
+        gradientView.isHidden = true
+        noRecentSearchesLabel.font = UIFont(name: Constants.globalFontBold, size: 19)
+        noRecentSearchesLabel.textAlignment = .center
+        noRecentSearchesLabel.frame = CGRect(x: 20, y: searchBar.frame.maxY + 100, width: UIScreen.main.bounds.width - 40, height: 30)
+//            noRecentSearchesLabel.sizeToFit()
+        clearButton.isHidden = true
+        noRecentSearchesLabel.fadeIn()
     }
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -748,7 +932,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, UITextFie
             vc.modalPresentationStyle = .fullScreen
             self.parent!.present(vc, animated: true)
         } else {
-            checkUsersLocationServicesAuthorization()
+//            checkUsersLocationServicesAuthorization()
         }
     }
     func hexStringToUIColor (hex:String) -> UIColor {
@@ -865,7 +1049,7 @@ extension MapsViewController: MKMapViewDelegate {
                             nameLabel.center.x = annotationView.frame.width / 2
                             nameLabel.textColor = self.hexStringToUIColor(hex: Constants.primaryColor)
                             nameLabel.textAlignment = .center
-                            nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+                            nameLabel.font = UIFont(name: Constants.globalFontBold, size: 9)
                             nameLabel.layer.cornerRadius = 4
                             nameLabel.clipsToBounds = true
 
@@ -888,7 +1072,7 @@ extension MapsViewController: MKMapViewDelegate {
                             nameLabel.center.x = annotationView.frame.width / 2
                             nameLabel.textColor = self.hexStringToUIColor(hex: Constants.groupPrimaryColor)
                             nameLabel.textAlignment = .center
-                            nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+                            nameLabel.font = UIFont(name: Constants.globalFontBold, size: 9)
                             nameLabel.layer.cornerRadius = 4
                             nameLabel.clipsToBounds = true
 
@@ -911,7 +1095,7 @@ extension MapsViewController: MKMapViewDelegate {
                             nameLabel.center.x = annotationView.frame.width / 2
                             nameLabel.textColor = self.hexStringToUIColor(hex: Constants.eventPrimaryColor)
                             nameLabel.textAlignment = .center
-                            nameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+                            nameLabel.font = UIFont(name: Constants.globalFontBold, size: 9)
                             nameLabel.layer.cornerRadius = 4
                             nameLabel.clipsToBounds = true
 

@@ -99,41 +99,43 @@ class ZoomAnimator: NSObject {
         self.toDelegate?.transitionWillStartWith(zoomAnimator: self)
         
         toReferenceImageView.isHidden = true
-        
-        let referenceImage = fromReferenceImageView.image!
-        
-        if self.transitionImageView == nil {
-            let transitionImageView = UIImageView(image: referenceImage)
-            transitionImageView.contentMode = .scaleAspectFill
-            transitionImageView.clipsToBounds = true
-            transitionImageView.frame = fromReferenceImageViewFrame
-            self.transitionImageView = transitionImageView
-            containerView.addSubview(transitionImageView)
-        }
-        
-        containerView.insertSubview(toVC.view, belowSubview: fromVC.view)
-        fromReferenceImageView.isHidden = true
-        
-        let finalTransitionSize = toReferenceImageViewFrame
-        
-        UIView.animate(withDuration: transitionDuration(using: transitionContext),
-                       delay: 0,
-                       options: [],
-                       animations: {
-                        fromVC.view.alpha = 0
-                        self.transitionImageView?.frame = finalTransitionSize
-                        toVC.tabBarController?.tabBar.alpha = 1
-        }, completion: { completed in
+        if let referenceImage = fromReferenceImageView.image {
+            if self.transitionImageView == nil {
+                let transitionImageView = UIImageView(image: referenceImage)
+                transitionImageView.contentMode = .scaleAspectFill
+                transitionImageView.clipsToBounds = true
+                transitionImageView.frame = fromReferenceImageViewFrame
+                self.transitionImageView = transitionImageView
+                containerView.addSubview(transitionImageView)
+            }
             
-            self.transitionImageView?.removeFromSuperview()
-            toReferenceImageView.isHidden = false
-            fromReferenceImageView.isHidden = false
+            containerView.insertSubview(toVC.view, belowSubview: fromVC.view)
+            fromReferenceImageView.isHidden = true
             
-            transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
-            self.toDelegate?.transitionDidEndWith(zoomAnimator: self)
-            self.fromDelegate?.transitionDidEndWith(zoomAnimator: self)
+            let finalTransitionSize = toReferenceImageViewFrame
+            
+            UIView.animate(withDuration: transitionDuration(using: transitionContext),
+                           delay: 0,
+                           options: [],
+                           animations: {
+                            fromVC.view.alpha = 0
+                            self.transitionImageView?.frame = finalTransitionSize
+                            toVC.tabBarController?.tabBar.alpha = 1
+            }, completion: { completed in
+                
+                self.transitionImageView?.removeFromSuperview()
+                toReferenceImageView.isHidden = false
+                fromReferenceImageView.isHidden = false
+                
+                transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
+                self.toDelegate?.transitionDidEndWith(zoomAnimator: self)
+                self.fromDelegate?.transitionDidEndWith(zoomAnimator: self)
 
-        })
+            })
+        }
+//        let referenceImage =
+        
+        
     }
     
     private func calculateZoomInImageFrame(image: UIImage, forView view: UIView) -> CGRect {

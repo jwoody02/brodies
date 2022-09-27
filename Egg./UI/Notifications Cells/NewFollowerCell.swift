@@ -26,6 +26,7 @@ class NewFollowercell: UITableViewCell {
     @IBOutlet weak var startedFollowingYouLabel: UILabel!
     
     @IBOutlet weak var followButton: UIButton!
+    @IBOutlet weak var brodieBanner: UIImageView!
     
     var parentViewController: NotificationsViewController?
     var index = 0
@@ -39,8 +40,8 @@ class NewFollowercell: UITableViewCell {
         let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        startedFollowingYouLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        startedFollowingYouLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
         let attrib = "started following you.  \(result.timeSince)"
         let mutableAttributedString = NSMutableAttributedString.init(string: attrib)
         mutableAttributedString.setColorForText(result.timeSince, with: .lightGray)
@@ -80,10 +81,23 @@ class NewFollowercell: UITableViewCell {
             print("* styling for not following")
             styleForNotFollowing()
         }
-        let followbuttonwidth = 100
+        let followbuttonwidth = 80
         followButton.frame = CGRect(x: Int(self.contentView.frame.width) - followbuttonwidth - 20, y: Int(22.5), width: followbuttonwidth, height: 35)
-        if result.uid == Auth.auth().currentUser?.uid {
-            followButton.isHidden = true
+        
+        if result.uid == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+//            followButton.isHidden = true
+            usernameLabel.isHidden = true
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 23, width: 60, height: 22)
+            brodieBanner.isHidden = false
+            startedFollowingYouLabel.frame = CGRect(x: usernameLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        } else {
+            if result.uid == Auth.auth().currentUser?.uid {
+                followButton.isHidden = true
+            } else {
+                followButton.isHidden = false
+            }
+            brodieBanner.isHidden = true
+            usernameLabel.isHidden = false
         }
 //        self.followButton.center.y = self.contentView.frame.center.y
 //        self.followButton.fadeIn()
@@ -126,6 +140,7 @@ class NewFollowercell: UITableViewCell {
                         } else {
                             print("succesfully followed user!")
                             (self.parentViewController?.notifications[self.index] as! FollowNotification).isFollowing = true
+                            self.result.isFollowing = true
                         }
                     }
                 }
@@ -140,31 +155,32 @@ class NewFollowercell: UITableViewCell {
                 } else {
                     print("succesfully unfollowed user!")
                     (self.parentViewController?.notifications[self.index] as! FollowNotification).isFollowing = false
+                    self.result.isFollowing = false
                 }
             }
         }
     }
     func styleForFollowing() {
-        self.followButton.setTitle("Following", for: .normal)
+        self.followButton.setTitle("Unfollow", for: .normal)
         self.followButton.backgroundColor = self.hexStringToUIColor(hex: "#ececec")
         self.followButton.tintColor = .black
         self.followButton.clipsToBounds = true
-        self.followButton.layer.cornerRadius = 12
-        self.followButton.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-        self.followButton.titleLabel?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-        self.followButton.setImage(UIImage(systemName: "chevron.down")?.applyingSymbolConfiguration(.init(pointSize: 8, weight: .semibold, scale: .medium))?.image(withTintColor: .black), for: .normal)
-        self.followButton.imageView?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-        let spacing = CGFloat(-10); // the amount of spacing to appear between image and title
-        followButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: spacing, bottom: -2, right: 0)
-        
-        followButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: spacing)
+        self.followButton.layer.cornerRadius = 8
+//        self.followButton.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+//        self.followButton.titleLabel?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+//        self.followButton.setImage(UIImage(systemName: "chevron.down")?.applyingSymbolConfiguration(.init(pointSize: 8, weight: .semibold, scale: .medium))?.image(withTintColor: .black), for: .normal)
+//        self.followButton.imageView?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+//        let spacing = CGFloat(-10); // the amount of spacing to appear between image and title
+//        followButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: spacing, bottom: -2, right: 0)
+//
+//        followButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: spacing)
     }
     func styleForNotFollowing() {
         self.followButton.setTitle("Follow", for: .normal)
         self.followButton.backgroundColor = self.hexStringToUIColor(hex: Constants.primaryColor)
         self.followButton.tintColor = .white
         self.followButton.clipsToBounds = true
-        self.followButton.layer.cornerRadius = 12
+        self.followButton.layer.cornerRadius = 8
         self.followButton.setImage(nil, for: .normal)
         followButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
         

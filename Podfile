@@ -31,9 +31,17 @@ target 'Egg.' do
   pod 'PanModal'
   pod 'IQKeyboardManager'
   pod 'FirebaseAppCheck'
-  #Material Design for UIComponents.
+  pod 'ImageSlideshow', '~> 1.9.0'
+  pod "ImageSlideshow/Kingfisher"
+  pod "PageControls"
+  pod 'ISPageControl', '~> 0.1.0'
   pod 'MDFInternationalization'
   pod 'MaterialComponents'
+  pod 'SwiftyGif'
+  pod 'ActiveLabel'
+  pod 'DPTagTextView'
+  pod 'TransitionButton'
+  pod 'FirebaseDynamicLinks'
   # pod 'InteractiveZoomDriver'
 #  pod 'SnapSDK'
   # Pods for Egg.

@@ -32,6 +32,7 @@ class NewCommentCell: UITableViewCell {
     @IBOutlet weak var commentLabel: UILabel!
     
     @IBOutlet weak var previewImage: UIImageView!
+    @IBOutlet weak var brodieBanner: UIImageView!
     
     var parentViewController: NotificationsViewController?
     var index = 0
@@ -45,11 +46,11 @@ class NewCommentCell: UITableViewCell {
         let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        usernameLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        commentLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        usernameLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+        commentLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
         
         let titleWidths = Int(Int(self.contentView.frame.width) - profXY - profWid - 30 - 50)
-        let heightForComment = (result.comment).height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 13)!)
+        let heightForComment = ("commented: \(result.comment)  \(result.timeSince)").height(withConstrainedWidth: CGFloat(titleWidths), font: UIFont(name: "\(Constants.globalFont)", size: 12)!)
         if heightForComment < 28 {
             usernameLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 25, width: titleWidths, height: 16)
         } else {
@@ -63,6 +64,7 @@ class NewCommentCell: UITableViewCell {
         mutableAttributedString.setColorForText(result.timeSince, with: .lightGray)
         commentLabel.attributedText = mutableAttributedString
         commentLabel.sizeToFit()
+//        commentLabel.frame = CGRect(x: commentLabel.frame.minX, y: commentLabel.frame.minY, width: CGFloat(titleWidths), height: heightForComment + 5)
         self.backgroundColor = .clear
         self.contentView.backgroundColor = .white
         self.contentView.layer.cornerRadius = 12
@@ -95,6 +97,16 @@ class NewCommentCell: UITableViewCell {
         self.previewImage.frame = CGRect(x: Int(self.contentView.frame.width) - prevImageWidth - prevImageY, y: prevImageY, width: prevImageWidth, height: prevImageWidth)
         self.previewImage.contentMode = .scaleAspectFill
         downloadPreview(with: result.postThumbnailURL)
+        if result.commentUserID == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+//            followButton.isHidden = true
+            usernameLabel.isHidden = true
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 16, width: 40, height: 18)
+            brodieBanner.isHidden = false
+            commentLabel.frame = CGRect(x: usernameLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: commentLabel.frame.height)
+        } else {
+            brodieBanner.isHidden = true
+            usernameLabel.isHidden = false
+        }
     }
     func styleCellFor(notification: CommentMadeNotification, index: Int) {
         self.result = notification

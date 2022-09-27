@@ -11,13 +11,17 @@ import FirebaseFirestore
 import Kingfisher
 import FirebaseAnalytics
 import PanModal
+import ImageSlideshow
+import PageControls
+import ActiveLabel
+import ISPageControl
 
-class ImagePostTableViewCell: UITableViewCell {
+class ImagePostTableViewCell: UITableViewCell, ImageSlideshowDelegate, UIScrollViewDelegate {
     @IBOutlet weak var profilePicImage: IGStoryButton!
     @IBOutlet weak var firstusernameButton: UIButton!
     @IBOutlet weak var secondusernameButton: UIButton!
     @IBOutlet weak var locationButton: UIButton!
-    @IBOutlet weak var captionLabel: UILabel!
+    @IBOutlet weak var captionLabel: ActiveLabel!
     
     @IBOutlet weak var timeSincePostedLabel: UILabel!
     
@@ -50,6 +54,15 @@ class ImagePostTableViewCell: UITableViewCell {
     @IBOutlet weak var checkMarkImageView: UIImageView!
     @IBOutlet weak var TaptoAddToCollectionLabel: UILabel!
     
+    // for multiple images
+    @IBOutlet var slideshow: ImageSlideshow!
+    @IBOutlet var pageControl: SnakePageControl!
+    @IBOutlet var IGpagecontrol: ISPageControl!
+    
+    // number of posts tings
+    @IBOutlet weak var numOfPostsView: UIView!
+    @IBOutlet weak var numOfPostsBlurView: UIVisualEffectView!
+    @IBOutlet weak var numOfPostsLabel: UILabel!
     
     var postid = ""
     var userID = ""
@@ -176,7 +189,10 @@ class ImagePostTableViewCell: UITableViewCell {
         super.layoutSubviews()
 
 //        contentView.frame = contentView.frame.inset(by: UIEdgeInsets(top: 10, left: 0, bottom: 10, right: 0))
-        contentView.frame = CGRect(x: 5, y: 10, width: self.frame.width - 10, height: self.frame.height - 20)
+        contentView.frame = CGRect(x: 5, y: 5, width: self.frame.width - 10, height: self.frame.height - 10)
+        let tapAction = UITapGestureRecognizer(target: self, action: #selector(self.didTapLabel(_:)))
+        captionLabel?.isUserInteractionEnabled = true
+        captionLabel?.addGestureRecognizer(tapAction)
     }
     func styleCell(type: String, hasSubTitle: Bool) {
 //        _ = driver
@@ -201,7 +217,7 @@ class ImagePostTableViewCell: UITableViewCell {
 //            self.layer.cornerRadius = Constants.borderRadius
             
             // PROFILE IMAGE
-            profilePicImage.layer.cornerRadius = 8
+            profilePicImage.layer.cornerRadius = 12
             profilePicImage.frame = CGRect(x: 8, y: 8, width: 38, height: 38)
             
             // USERNAME LABEL
@@ -221,7 +237,7 @@ class ImagePostTableViewCell: UITableViewCell {
                 firstusernameButton.frame = CGRect(x: profilePicImage.frame.maxX + 10, y: profilePicImage.frame.minY, width: CGFloat(extraButtonWidths), height: 16)
                 firstusernameButton.center.y = profilePicImage.center.y
             }
-            locationButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 12)
+            locationButton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 11)
             timeSincePostedLabel.frame = CGRect(x: firstusernameButton.frame.minX, y: firstusernameButton.frame.minY, width: self.contentView.bounds.width - firstusernameButton.frame.maxX, height: 16)
             timeSincePostedLabel.backgroundColor = .clear
 
@@ -268,7 +284,13 @@ class ImagePostTableViewCell: UITableViewCell {
 //            self.mainPostImage.addGestureRecognizer(singleTap)
             let doubleTap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
                 doubleTap.numberOfTapsRequired = 2
-            self.mainPostImage.addGestureRecognizer(doubleTap)
+            if actualPost.multiImageUrls.count > 1 {
+                self.slideshow.addGestureRecognizer(doubleTap)
+            } else {
+                self.mainPostImage.addGestureRecognizer(doubleTap)
+            }
+            
+            
 //            singleTap.require(toFail: doubleTap)
 //            singleTap.delaysTouchesBegan = true
             doubleTap.delaysTouchesBegan = true
@@ -292,7 +314,8 @@ class ImagePostTableViewCell: UITableViewCell {
             } else {
                 likesLabel.text = "\(actualPost.likesCount.delimiter) likes"
             }
-            likesLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 16)
+//            likesLabel.font = UIFont(name: Constants.globalFontBold, size: 14)
+            likesLabel.font = UIFont(name: Constants.globalFontMedium, size: 15)
             likesLabel.textColor = Constants.textColor.hexToUiColor()
             print("* received profile pics: \(actualPost.previewProfilePics)")
             
@@ -357,30 +380,58 @@ class ImagePostTableViewCell: UITableViewCell {
                 captionLabel.textColor = .lightGray
             }
             otherLikesbutton.frame = CGRect(x: profilePicView3.frame.maxX + 5, y: profilePicView1.frame.minY, width: self.contentView.bounds.width - profilePicView3.frame.maxX - 15 - 15, height: profilePicView3.frame.height)
-            otherLikesbutton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 13)
+            otherLikesbutton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 11)
             otherLikesbutton.isHidden = false
             tmpViewLikesButton.frame = CGRect(x: 0, y: 0, width: self.viewLikesView.frame.width, height: self.viewLikesView.frame.height)
             
             self.secondusernameButton.frame = CGRect(x: 15, y: profilePicView1.frame.maxY+10, width: 5, height: 5)
+            self.captionLabel.numberOfLines = 0
+            
+            
             
 //            self.secondusernameButton.backgroundColor = .blue
-            let captionFont = UIFont(name: "\(Constants.globalFont)", size: 14)
-            let captionString = "\(actualPost.username)  \(actualPost.caption)"
-            captionLabel.font = captionFont
-            captionLabel.text = captionString
+            let captionFont = UIFont(name: "\(Constants.globalFont)", size: 12)
+            let captionString = "\(actualPost.username)   \(actualPost.caption)"
             let captionWidth = self.contentView.bounds.width - 15 - secondusernameButton.frame.maxX
-            
             let expectedLabelHeight = captionString.height(withConstrainedWidth: captionWidth, font: captionFont!)
             print("* expected label height: \(expectedLabelHeight)")
-            if expectedLabelHeight < 20 {
-                self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY-2, width: captionWidth, height: 20)
-            } else if (expectedLabelHeight > 40) {
-                self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY-2, width: captionWidth, height: 40)
-                self.captionLabel.addTrailing(with: "... ", moreText: "more", moreTextFont: captionLabel.font, moreTextColor: .lightGray)
+            captionLabel.font = captionFont
+            captionLabel.text = captionString
+            
+            self.captionLabel.textAlignment = .left
+            if actualPost.shouldShowFullText == false {
+                if expectedLabelHeight < 17 {
+                    self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY - 2, width: captionWidth, height: 16)
+                } else if (expectedLabelHeight > 40) {
+                    self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY - 2, width: captionWidth, height: 32)
+    //                self.captionLabel.addTrailing(with: "... ", moreText: "more", moreTextFont: captionLabel.font, moreTextColor: Constants.primaryColor.hexToUiColor())
+                    self.captionLabel.appendReadmore(after: captionString, trailingContent: .readmore)
+                    
+                } else {
+                    self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY - 2, width: captionWidth, height: 32)
+    //                self.captionLabel.appendReadmore(after: captionString as NSString, trailingContent: .readmore)
+                }
+                
             } else {
-                self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY-2, width: captionWidth, height: 40)
+                
+                self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY - 3, width: captionWidth, height: expectedLabelHeight)
+                self.viewCommentsButton.frame = CGRect(x: 15, y: captionLabel.frame.maxY+15, width: 5, height: 20)
+                self.viewCommentsButton.sizeToFit()
+                viewCommentsButton.frame = CGRect(x: viewCommentsButton.frame.minX, y: viewCommentsButton.frame.minY, width: viewCommentsButton.frame.width + 25, height: viewCommentsButton.frame.height + 5)
             }
-//
+            
+            if actualPost.caption == "" {
+                self.secondusernameButton.isHidden = true
+                self.secondusernameButton.alpha = 0
+                self.captionLabel.isHidden = true
+                self.captionLabel.alpha = 0
+                self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY-2, width: captionWidth, height: 0)
+            } else {
+                self.secondusernameButton.isHidden = false
+                self.secondusernameButton.alpha = 1
+                self.captionLabel.isHidden = false
+                self.captionLabel.alpha = 1
+            }
             self.firstusernameButton.backgroundColor = contentView.backgroundColor
             self.secondusernameButton.backgroundColor = firstusernameButton.backgroundColor
             
@@ -389,7 +440,7 @@ class ImagePostTableViewCell: UITableViewCell {
             self.viewCommentsButton.layer.cornerRadius = 8
             self.viewCommentsButton.backgroundColor = Constants.secondaryColor.hexToUiColor()
             self.viewCommentsButton.tintColor = Constants.primaryColor.hexToUiColor()
-            viewCommentsButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 15)
+            viewCommentsButton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 13)
             UIView.performWithoutAnimation {
                 self.viewCommentsButton.setTitle("\(actualPost.commentCount.delimiter) Comments", for: .normal)
             }
@@ -413,6 +464,187 @@ class ImagePostTableViewCell: UITableViewCell {
             }
         }
         addPinchGesture()
+        styleActiveLabel()
+        let seconds = 2.0
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+            // Put your code which should be executed with a delay here
+            let tapAction = UITapGestureRecognizer(target: self, action: #selector(self.didTapLabel(_:)))
+            self.captionLabel?.isUserInteractionEnabled = true
+            self.captionLabel?.addGestureRecognizer(tapAction)
+        }
+        
+    }
+    @objc func didTapLabel(_ sender: UITapGestureRecognizer) {
+           guard let text = captionLabel.text else { return }
+
+           let readmore = (text as NSString).range(of: TrailingContent.readmore.text)
+           let readless = (text as NSString).range(of: TrailingContent.readless.text)
+           if sender.didTap(label: captionLabel, inRange: readmore) {
+               let captionFont = UIFont(name: "\(Constants.globalFont)", size: 12)
+               let captionString = "\(actualPost.username)   \(actualPost.caption)"
+               captionLabel.appendReadLess(after: captionString, trailingContent: .readless)
+//               captionLabel.sizeToFit()
+               
+               let captionWidth = self.contentView.bounds.width - 15 - secondusernameButton.frame.maxX
+               let expectedLabelHeight = captionString.height(withConstrainedWidth: captionWidth, font: captionFont!)
+               self.captionLabel.frame = CGRect(x: secondusernameButton.frame.minX, y: secondusernameButton.frame.minY - 2, width: captionWidth, height: expectedLabelHeight)
+               self.viewCommentsButton.frame = CGRect(x: 15, y: captionLabel.frame.maxY+15, width: 5, height: 20)
+               self.viewCommentsButton.sizeToFit()
+               viewCommentsButton.frame = CGRect(x: viewCommentsButton.frame.minX, y: viewCommentsButton.frame.minY, width: viewCommentsButton.frame.width + 25, height: viewCommentsButton.frame.height + 5)
+               if let _ = self.parentViewController?.imagePosts?[postIndex] as? imagePost {
+                   (self.parentViewController?.imagePosts?[postIndex] as! imagePost).shouldShowFullText = true
+                   self.parentViewController?.postsTableView.reloadData()
+               }
+           } else if  sender.didTap(label: captionLabel, inRange: readless) {
+               captionLabel.appendReadmore(after: actualPost.caption, trailingContent: .readmore)
+               self.viewCommentsButton.frame = CGRect(x: 15, y: captionLabel.frame.maxY+15, width: 5, height: 20)
+               self.viewCommentsButton.sizeToFit()
+               if let _ = self.parentViewController?.imagePosts?[postIndex] as? imagePost {
+                   (self.parentViewController?.imagePosts?[postIndex] as! imagePost).shouldShowFullText = false
+                   self.parentViewController?.postsTableView.reloadData()
+               }
+           } else { return }
+           
+       }
+    func styleActiveLabel() {
+        captionLabel.enabledTypes = [.mention, .hashtag, .url]
+        captionLabel.customize { label in
+            label.hashtagColor = Constants.primaryColor.hexToUiColor().withAlphaComponent(0.7)
+            label.mentionColor = Constants.primaryColor.hexToUiColor()
+            label.URLColor = Constants.primaryColor.hexToUiColor()
+            label.handleMentionTap { userHandle in
+                print("* opening profile for user: @\(userHandle)")
+                let userLocalRef = self.db.collection("user-locations").whereField("username", isEqualTo: userHandle.lowercased()).limit(to: 1)
+                userLocalRef.getDocuments() { (querySnapshot, err) in
+                    if let err = err {
+                        print("Error getting documents: \(err)")
+                    } else {
+                        if querySnapshot?.count != 0 {
+                            print("* got user doc: \(querySnapshot?.documents[0].documentID)")
+                            self.openProfileForUser(withUID: (querySnapshot?.documents[0].documentID)!)
+                        }
+                    }
+                }
+            }
+//            label.handleHashtagTap { self.alert("Hashtag", message: $0) }
+            label.handleURLTap { url in
+                print("* opening url: \(url)")
+                if #available(iOS 10.0, *) {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                } else {
+                    UIApplication.shared.openURL(url)
+                }
+            }
+        }
+    }
+    func setupSlideshow() {
+        print("* setting up slideshow with \(actualPost.multiImageUrls)")
+        slideshow.frame = mainPostImage.frame
+        slideshow.slideshowInterval = 0
+        slideshow.pageIndicatorPosition = .init(horizontal: .center, vertical: .under)
+        slideshow.contentScaleMode = UIViewContentMode.scaleAspectFill
+
+        slideshow.pageIndicator = nil
+        // optional way to show activity indicator during image load (skipping the line will show no activity indicator)
+        slideshow.activityIndicator = DefaultActivityIndicator()
+        slideshow.delegate = self
+        slideshow.zoomEnabled = true
+        slideshow.circular = false
+        var imageSrcs: [KingfisherSource] = []
+        for im in actualPost.multiImageUrls {
+            imageSrcs.append(KingfisherSource(urlString: im)!)
+        }
+//        setupSnakeControl()
+        IGpagecontrol.numberOfPages = imageSrcs.count
+        setupIGControl()
+        
+        slideshow.setImageInputs(imageSrcs)
+//        slideshow.scrollView.delegate = self
+    }
+    func setupIGControl() {
+        let frame = CGRect(x: 0, y: Int(slideshow.frame.maxY) + 20, width: 24, height: 15)
+//        IGpagecontrol = ISPageControl(frame: frame, numberOfPages: 4)
+        
+        IGpagecontrol.frame = frame
+        IGpagecontrol.center.x = self.contentView.frame.width / 2
+        IGpagecontrol.radius = 3.5
+        IGpagecontrol.padding = 4
+        IGpagecontrol.inactiveTintColor = .lightGray
+        IGpagecontrol.currentPageTintColor = Constants.primaryColor.hexToUiColor()
+        IGpagecontrol.borderWidth = 0
+//        IGpagecontrol.borderColor = UIColor.red
+        numOfPostsLabel.text = "1/\(actualPost.multiImageUrls.count)"
+        numOfPostsLabel.font = UIFont(name: Constants.globalFontMedium, size: 12)
+        let pad = 10
+        let wid = 40
+        numOfPostsView.frame = CGRect(x: Int(self.contentView.frame.width) - pad - wid, y: Int(slideshow.frame.minY) + pad, width: wid, height: 25)
+        print("* num postsview frame: \(numOfPostsView)")
+        numOfPostsView.backgroundColor = .clear
+        numOfPostsView.layer.cornerRadius = 8
+        numOfPostsView.clipsToBounds = true
+        
+        numOfPostsBlurView.frame = CGRect(x: 0, y: 0, width: numOfPostsView.frame.width, height: numOfPostsView.frame.height)
+//        numOfPostsBlurView.backgroundColor = .black
+        let blurEffect = UIBlurEffect(style: .dark)
+        let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
+        numOfPostsBlurView.effect = blurEffect
+        numOfPostsBlurView.alpha = 0.8
+        numOfPostsLabel.frame = numOfPostsBlurView.frame
+        numOfPostsLabel.textAlignment = .center
+        
+//        numOfPostsView.alpha = 1
+//        numOfPostsView.isHidden = false
+    }
+    func setupSnakeControl() {
+        pageControl.indicatorRadius = 4
+        pageControl.indicatorPadding = 6
+        pageControl.activeTint = .gray
+        pageControl.inactiveTint = .lightGray.withAlphaComponent(0.5)
+        
+        // custom frame stuffs
+        
+        
+        pageControl.pageCount = actualPost.multiImageUrls.count
+        let tmpSize = pageControl.sizeThatFits(CGSize.zero)
+//        pageControl.layer.borderColor = UIColor.red.cgColor
+//        pageControl.layer.borderWidth = 2
+        var size = Int(tmpSize.width)
+        pageControl.frame = CGRect(x: 0, y: Int(slideshow.frame.maxY) + 20, width: size, height: 15)
+        pageControl.center.x = self.contentView.frame.width / 2
+    }
+    func imageSlideshow(_ imageSlideshow: ImageSlideshow, didChangeCurrentPageTo page: Int) {
+           print("[slideshow changed] current page:", page)
+        
+            let pageMath = imageSlideshow.scrollView.contentOffset.x / imageSlideshow.scrollView.bounds.width
+//            pageControl.progress = pageMath
+            print("* set page control progress \(pageMath)")
+            IGpagecontrol.currentPage = Int(page)
+            numOfPostsLabel.text = "\(page + 1)/\(actualPost.multiImageUrls.count)"
+        
+        if self.numOfPostsView.alpha == 0 && page == imageSlideshow.currentPage {
+            self.numOfPostsView.fadeIn()
+        }
+        let seconds = 2.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                // Put your code which should be executed with a delay here
+                if page == imageSlideshow.currentPage {
+                    if self.numOfPostsView.alpha == 1 {
+                        self.numOfPostsView.fadeOut()
+                    }
+                }
+                
+                
+            }
+       }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            let page = scrollView.contentOffset.x / scrollView.bounds.width
+            let progressInPage = scrollView.contentOffset.x - (page * scrollView.bounds.width)
+            let progress = CGFloat(page) + progressInPage
+//        pageControl.progress = progress
+        
+        }
+    func imageSlideshowDidEndDecelerating(_ imageSlideshow: ImageSlideshow) {
+        print("* slideshow did end decelerating")
     }
     private func addPinchGesture() {
         let pinch = UIPinchGestureRecognizer(target: self, action: #selector(self.pinch(sender:)))
@@ -609,6 +841,7 @@ class ImagePostTableViewCell: UITableViewCell {
         let vc = ThreeDotsOnPostController()
         vc.postID = self.actualPost.postID
         vc.authorOfPost = self.actualPost.userID
+        vc.imagePostURL = self.actualPost.imageUrl
         self.parentViewController?.presentPanModal(vc)
     }
     @IBAction func saveViewTapped(_ sender: Any) {
@@ -768,6 +1001,7 @@ class ImagePostTableViewCell: UITableViewCell {
         vc.originalPostID = self.postid
         vc.originalPostAuthorID = self.userID
         vc.currentUserUsername = self.currentUserUsername
+            vc.parentVC = self.parentViewController
         vc.currentUserProfilePic = self.currentUserProfilePic
         let generator = UIImpactFeedbackGenerator(style: .medium)
                         generator.impactOccurred()
@@ -793,6 +1027,27 @@ class ImagePostTableViewCell: UITableViewCell {
             }
         }
     }
+    @IBAction func messagesPressed(_ sender: Any) {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+//        let drop = Drop(
+//            title: "Coming Soon",
+//            subtitle: "Direct Messaging will be coming in a future update",
+//            icon: UIImage(systemName: "exclamationmark.triangle")?.withTintColor(.yellow),
+//            action: .init {
+//                print("Drop tapped")
+//                Drops.hideCurrent()
+//            },
+//            position: .top,
+//            duration: 5.0,
+//            accessibility: "Alert: Title, Subtitle"
+//        )
+//        Drops.show(drop)
+        let image = UIImage.init(systemName: "exclamationmark.triangle")!.withTintColor(.systemYellow, renderingMode: .alwaysOriginal)
+//        SPIndicator.present(title: "Coming Soon", message: "DMs are coming soon", preset: .custom(image))
+            parentViewController?.showErrorMessage(title: "Coming Soon", body: "Messaging will be coming in a future update, sorry if we gave u blue balls :P")
+    }
+    
     @IBAction func userNameButtonTapped(_ sender: Any) {
         openProfileForUser(withUID: actualPost.userID)
     }
@@ -848,6 +1103,7 @@ class ImagePostTableViewCell: UITableViewCell {
             }
         }
     }
+    
     func downloadImage(`with` urlString : String) {
         guard let url = URL.init(string: urlString) else {
             return
@@ -928,3 +1184,35 @@ extension UILabel {
             return self.text!.count
         }
     }
+extension UITapGestureRecognizer {
+
+    func didTap(label: UILabel, inRange targetRange: NSRange) -> Bool {
+        
+        // Create instances of NSLayoutManager, NSTextContainer and NSTextStorage
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(size: CGSize.zero)
+        let textStorage = NSTextStorage(attributedString: label.attributedText!)
+
+        // Configure layoutManager and textStorage
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+
+        // Configure textContainer
+        textContainer.lineFragmentPadding = 0.0
+        textContainer.lineBreakMode = label.lineBreakMode
+        textContainer.maximumNumberOfLines = label.numberOfLines
+        let labelSize = label.bounds.size
+        textContainer.size = labelSize
+
+        // Find the tapped character location and compare it to the specified range
+        let locationOfTouchInLabel = self.location(in: label)
+        let textBoundingBox = layoutManager.usedRect(for: textContainer)
+
+        let textContainerOffset = CGPoint(x: (labelSize.width - textBoundingBox.size.width) * 0.5 - textBoundingBox.origin.x, y: (labelSize.height - textBoundingBox.size.height) * 0.5 - textBoundingBox.origin.y)
+
+        let locationOfTouchInTextContainer = CGPoint(x: locationOfTouchInLabel.x - textContainerOffset.x, y: locationOfTouchInLabel.y - textContainerOffset.y)
+        let indexOfCharacter = layoutManager.characterIndex(for: locationOfTouchInTextContainer, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
+        return NSLocationInRange(indexOfCharacter, targetRange)
+    }
+
+}

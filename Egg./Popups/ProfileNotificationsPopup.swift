@@ -50,7 +50,7 @@ class ProfileNotificationsPopup: UIViewController {
         if let settingsLabel = self.settingsLabel {
             settingsLabel.text = "Push Notifications"
             settingsLabel.frame = CGRect(x: 0, y: 20, width: UIScreen.main.bounds.width, height: 25)
-            settingsLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+            settingsLabel.font = UIFont(name: "HelveticaNeue-Bold", size: 16)
             settingsLabel.textColor = .darkGray
             settingsLabel.textAlignment = .center
             self.view.addSubview(settingsLabel)
@@ -79,7 +79,7 @@ class ProfileNotificationsPopup: UIViewController {
                     likesNotificationsLabel.text = "New Posts"
                     likesNotificationsLabel.isUserInteractionEnabled = false
                     likesNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    likesNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    likesNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.likesNotificationsView?.addSubview(likesNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -104,7 +104,7 @@ class ProfileNotificationsPopup: UIViewController {
                     commentsNotificationsLabel.text = "New Stories"
                     commentsNotificationsLabel.isUserInteractionEnabled = false
                     commentsNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    commentsNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    commentsNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.commentsNotificationsView?.addSubview(commentsNotificationsLabel)
                 }
                 let checkboxWid = 20

@@ -12,6 +12,9 @@ import FirebaseFirestore
 import FirebaseAuth
 import FirebaseAnalytics
 import Zoomy
+import ImageSlideshow
+import ISPageControl
+import PageControls
 
 protocol PhotoZoomViewControllerDelegate: class {
     func photoZoomViewController(_ photoZoomViewController: PhotoZoomViewController, scrollViewDidScroll scrollView: UIScrollView)
@@ -48,6 +51,20 @@ class PhotoZoomViewController: UIViewController {
     @IBOutlet weak var profilePicView2: UIImageView! // imageview2 that'll contain profile pic
     @IBOutlet weak var profilePicView3: UIImageView! // imageview3 that'll contain profile pic
     
+    
+    // for multiple images
+    @IBOutlet var slideshow: ImageSlideshow!
+    @IBOutlet var pageControl: SnakePageControl!
+    @IBOutlet var IGpagecontrol: ISPageControl!
+    
+    // number of posts tings
+    @IBOutlet weak var numOfPostsView: UIView!
+    @IBOutlet weak var numOfPostsBlurView: UIVisualEffectView!
+    @IBOutlet weak var numOfPostsLabel: UILabel!
+    
+    
+    
+    
     weak var delegate: PhotoZoomViewControllerDelegate?
     
     var image: UIImage!
@@ -75,7 +92,7 @@ class PhotoZoomViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 //        self.imageView.image = self.image
-        downloadTomain(with: actualPost.imageUrl)
+        
         self.mainPostImage.frame = CGRect(x: 0,
                                       y: 70,
                                       width: UIScreen.main.bounds.width,
@@ -96,7 +113,30 @@ class PhotoZoomViewController: UIViewController {
             }
             
         }
-        addZoombehavior(for: mainPostImage, settings: .instaZoomSettings)
+        if actualPost.multiImageUrls.count > 1 {
+            mainPostImage.alpha = 0
+            slideshow.alpha = 1
+            setupSlideshow()
+            slideshow.isUserInteractionEnabled = true
+            mainPostImage.isUserInteractionEnabled = false
+            IGpagecontrol.alpha = 1
+            let doubleTap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+                doubleTap.numberOfTapsRequired = 2
+            self.slideshow.addGestureRecognizer(doubleTap)
+            doubleTap.delaysTouchesBegan = false
+        } else {
+            downloadTomain(with: actualPost.imageUrl)
+            mainPostImage.alpha = 1
+            slideshow.alpha = 0
+            mainPostImage.isUserInteractionEnabled = true
+            slideshow.isUserInteractionEnabled = false
+            IGpagecontrol.alpha = 0
+            addZoombehavior(for: mainPostImage, settings: .instaZoomSettings)
+            let doubleTap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+                doubleTap.numberOfTapsRequired = 2
+            self.mainPostImage.addGestureRecognizer(doubleTap)
+            doubleTap.delaysTouchesBegan = false
+        }
         currentUserUsername = pageContainer?.username ?? ""
         actualPost.username = currentUserUsername
         currentUserProfilePic = pageContainer?.imageUrl ?? ""
@@ -216,6 +256,7 @@ class PhotoZoomViewController: UIViewController {
         let vc = ThreeDotsOnPostController()
         vc.postID = self.actualPost.postID
         vc.authorOfPost = self.actualPost.userID
+        vc.imagePostURL = self.actualPost.imageUrl
         self.presentPanModal(vc)
     }
     func styleMore() {
@@ -227,10 +268,10 @@ class PhotoZoomViewController: UIViewController {
         print("* POST USERNAME: \(actualPost.username)")
         firstusernameButton.setTitle(actualPost.username , for: .normal)
         secondusernameButton.setTitle(actualPost.username , for: .normal)
-        firstusernameButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
-        secondusernameButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+        firstusernameButton.titleLabel?.font = UIFont(name: Constants.globalFontBold, size: 13)
+        secondusernameButton.titleLabel?.font = UIFont(name: Constants.globalFontBold, size: 13)
     
-        timeSincePostedLabel.font = UIFont(name: "\(Constants.globalFont)", size: 14)
+        timeSincePostedLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
         let timeSince = Date(timeIntervalSince1970: TimeInterval(actualPost.createdAt ?? 0)).timeAgoDisplay()
         timeSincePostedLabel.text = "\(currentUserUsername)  • \(timeSince)"
         firstusernameButton.sizeToFit()
@@ -409,7 +450,7 @@ class PhotoZoomViewController: UIViewController {
                 firstusernameButton.frame = CGRect(x: profilePicImage.frame.maxX + 10, y: profilePicImage.frame.minY, width: CGFloat(extraButtonWidths), height: 16)
                 firstusernameButton.center.y = profilePicImage.center.y
             }
-            locationButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 13)
+            locationButton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 12)
             timeSincePostedLabel.frame = CGRect(x: firstusernameButton.frame.minX, y: firstusernameButton.frame.minY, width: UIScreen.main.bounds.width - firstusernameButton.frame.maxX, height: 20)
             timeSincePostedLabel.backgroundColor = .clear
 
@@ -435,17 +476,11 @@ class PhotoZoomViewController: UIViewController {
             
             
             
-            self.mainPostImage.isUserInteractionEnabled = true
             // Single Tap
 //                let singleTap: UITapGestureRecognizer =  UITapGestureRecognizer(target: self, action: #selector(handleSingleTap(_:)))
 //                singleTap.numberOfTapsRequired = 1
 //            self.mainPostImage.addGestureRecognizer(singleTap)
-            let doubleTap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
-                doubleTap.numberOfTapsRequired = 2
-            self.mainPostImage.addGestureRecognizer(doubleTap)
-//            singleTap.require(toFail: doubleTap)
-//            singleTap.delaysTouchesBegan = true
-            doubleTap.delaysTouchesBegan = false
+            
             mainPostImage.layer.cornerRadius = 0
             
 //            self.firstusernameButton.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
@@ -466,7 +501,7 @@ class PhotoZoomViewController: UIViewController {
             } else {
                 likesLabel.text = "\(actualPost.likesCount.delimiter) likes"
             }
-            likesLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 16)
+            likesLabel.font = UIFont(name: Constants.globalFontMedium, size: 15)
             likesLabel.textColor = .black
             print("* received profile pics: \(actualPost.previewProfilePics)")
             
@@ -525,14 +560,14 @@ class PhotoZoomViewController: UIViewController {
             print("* using string: \(likesString)")
             otherLikesbutton.setTitle(likesString, for: .normal)
             otherLikesbutton.frame = CGRect(x: profilePicView3.frame.maxX + 5, y: profilePicView1.frame.minY, width: UIScreen.main.bounds.width - profilePicView3.frame.maxX - 15 - 15, height: profilePicView3.frame.height)
-            otherLikesbutton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 13)
+            otherLikesbutton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 12)
             otherLikesbutton.isHidden = false
             tmpViewLikesButton.frame = CGRect(x: 0, y: 0, width: self.viewLikesView.frame.width, height: self.viewLikesView.frame.height)
             
             self.secondusernameButton.frame = CGRect(x: 15, y: profilePicView1.frame.maxY+10, width: 5, height: 5)
             
 //            self.secondusernameButton.backgroundColor = .blue
-            let captionFont = UIFont(name: "\(Constants.globalFont)", size: 14)
+            let captionFont = UIFont(name: "\(Constants.globalFont)", size: 13)
             let captionString = "\(actualPost.username)  \(actualPost.caption)"
             captionLabel.font = captionFont
             captionLabel.text = captionString
@@ -555,7 +590,7 @@ class PhotoZoomViewController: UIViewController {
             self.viewCommentsButton.layer.cornerRadius = 8
             self.viewCommentsButton.backgroundColor = Constants.secondaryColor.hexToUiColor()
             self.viewCommentsButton.tintColor = Constants.primaryColor.hexToUiColor()
-            viewCommentsButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 15)
+            viewCommentsButton.titleLabel?.font = UIFont(name: Constants.globalFontMedium, size: 14)
             self.viewCommentsButton.setTitle("\(actualPost.commentCount.delimiter) Comments", for: .normal)
             self.viewCommentsButton.titleLabel?.textColor = viewCommentsButton.tintColor
             viewCommentsButton.titleEdgeInsets = UIEdgeInsets(top: 10, left: 5, bottom: 10, right: 5)
@@ -931,4 +966,104 @@ extension PhotoZoomViewController: UIScrollViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.delegate?.photoZoomViewController(self, scrollViewDidScroll: scrollView)
     }
+}
+extension PhotoZoomViewController: ImageSlideshowDelegate {
+    func setupSlideshow() {
+        print("* setting up slideshow with \(actualPost.multiImageUrls)")
+        slideshow.frame = mainPostImage.frame
+        slideshow.slideshowInterval = 0
+        slideshow.pageIndicatorPosition = .init(horizontal: .center, vertical: .under)
+        slideshow.contentScaleMode = UIViewContentMode.scaleAspectFill
+
+        slideshow.pageIndicator = nil
+        // optional way to show activity indicator during image load (skipping the line will show no activity indicator)
+        slideshow.activityIndicator = DefaultActivityIndicator()
+        slideshow.delegate = self
+        slideshow.zoomEnabled = true
+        slideshow.circular = false
+        var imageSrcs: [KingfisherSource] = []
+        for im in actualPost.multiImageUrls {
+            imageSrcs.append(KingfisherSource(urlString: im)!)
+        }
+//        setupSnakeControl()
+        IGpagecontrol.numberOfPages = imageSrcs.count
+        setupIGControl()
+        
+        slideshow.setImageInputs(imageSrcs)
+//        slideshow.scrollView.delegate = self
+    }
+    func setupIGControl() {
+        let frame = CGRect(x: 0, y: Int(slideshow.frame.maxY) + 20, width: 24, height: 15)
+//        IGpagecontrol = ISPageControl(frame: frame, numberOfPages: 4)
+        
+        IGpagecontrol.frame = frame
+        IGpagecontrol.center.x = self.view.frame.width / 2
+        IGpagecontrol.radius = 3.5
+        IGpagecontrol.padding = 4
+        IGpagecontrol.inactiveTintColor = .lightGray
+        IGpagecontrol.currentPageTintColor = Constants.primaryColor.hexToUiColor()
+        IGpagecontrol.borderWidth = 0
+//        IGpagecontrol.borderColor = UIColor.red
+        numOfPostsLabel.text = "1/\(actualPost.multiImageUrls.count)"
+        let pad = 10
+        let wid = 40
+        numOfPostsView.frame = CGRect(x: Int(self.view.frame.width) - pad - wid, y: Int(slideshow.frame.minY) + pad, width: wid, height: 25)
+        print("* num postsview frame: \(numOfPostsView)")
+        numOfPostsView.backgroundColor = .clear
+        numOfPostsView.layer.cornerRadius = 8
+        numOfPostsView.clipsToBounds = true
+        
+        numOfPostsBlurView.frame = CGRect(x: 0, y: 0, width: numOfPostsView.frame.width, height: numOfPostsView.frame.height)
+//        numOfPostsBlurView.backgroundColor = .black
+        let blurEffect = UIBlurEffect(style: .dark)
+        let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
+        numOfPostsBlurView.effect = blurEffect
+        numOfPostsBlurView.alpha = 0.8
+        numOfPostsLabel.frame = numOfPostsBlurView.frame
+        numOfPostsLabel.textAlignment = .center
+        
+//        numOfPostsView.alpha = 1
+//        numOfPostsView.isHidden = false
+    }
+    func setupSnakeControl() {
+        pageControl.indicatorRadius = 4
+        pageControl.indicatorPadding = 6
+        pageControl.activeTint = .gray
+        pageControl.inactiveTint = .lightGray.withAlphaComponent(0.5)
+        
+        // custom frame stuffs
+        
+        
+        pageControl.pageCount = actualPost.multiImageUrls.count
+        let tmpSize = pageControl.sizeThatFits(CGSize.zero)
+//        pageControl.layer.borderColor = UIColor.red.cgColor
+//        pageControl.layer.borderWidth = 2
+        var size = Int(tmpSize.width)
+        pageControl.frame = CGRect(x: 0, y: Int(slideshow.frame.maxY) + 20, width: size, height: 15)
+        pageControl.center.x = self.view.frame.width / 2
+    }
+    func imageSlideshow(_ imageSlideshow: ImageSlideshow, didChangeCurrentPageTo page: Int) {
+           print("[slideshow changed] current page:", page)
+        
+            let pageMath = imageSlideshow.scrollView.contentOffset.x / imageSlideshow.scrollView.bounds.width
+//            pageControl.progress = pageMath
+            print("* set page control progress \(pageMath)")
+            IGpagecontrol.currentPage = Int(page)
+            numOfPostsLabel.text = "\(page + 1)/\(actualPost.multiImageUrls.count)"
+        
+        if self.numOfPostsView.alpha == 0 && page == imageSlideshow.currentPage {
+            self.numOfPostsView.fadeIn()
+        }
+        let seconds = 2.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                // Put your code which should be executed with a delay here
+                if page == imageSlideshow.currentPage {
+                    if self.numOfPostsView.alpha == 1 {
+                        self.numOfPostsView.fadeOut()
+                    }
+                }
+                
+                
+            }
+       }
 }

@@ -14,6 +14,8 @@ import FirebaseStorage
 import FirebaseAuth
 import Loady
 import FirebaseAnalytics
+import MobileCoreServices
+import SwiftyGif
 
 class CameraViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UITextViewDelegate, UITextFieldDelegate, UITableViewDelegate, UITableViewDataSource, MKLocalSearchCompleterDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
@@ -63,6 +65,12 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
     internal var addTagsIcon: UIImageView?
     internal var AddTagsTextField: UITextField?
     
+    internal var glimpsView: UIView?
+    internal var gimpsText: UILabel? // *new*
+    internal var glimpsLogo: UIImageView? // either system image: "timelapse" or "flame" or "flame.fill"
+    
+    var prevPostType = "story"
+    
     var interactor:Interactor? = nil
     
     var postType = "story"
@@ -102,10 +110,14 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
         "CIHexagonalPixellate"
     ]
     
+    var postPhotos: [UIImage] = []
+    
     internal var stepNameLabel: UILabel?
     internal var nextButton: UIButton?
     internal var captionView: UITextView?
     internal var goBackButton: UIButton?
+    internal var numOfImageLabel: UILabel?
+    
     internal var longPressGestureRecognizer: UILongPressGestureRecognizer?
     internal var photoTapGestureRecognizer: UITapGestureRecognizer?
     internal var focusTapGestureRecognizer: UITapGestureRecognizer?
@@ -142,6 +154,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
     // MARK: - view lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.view.isUserInteractionEnabled = true
         let loader = ColorCubeLoader(bundle: .main)
         let filters: [FilterColorCube]? = try? loader.load()
 
@@ -159,17 +172,23 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
 //            locationManager.requestLocation()
         let screenBounds = UIScreen.main.bounds
         currentFlashMode = .auto
+        NextLevel.shared._currentDevice = AVCaptureDevice.default(for: .video)
+        NextLevel.shared.flashMode = .auto
+        print("* is NL flash available: \(NextLevel.shared.isFlashAvailable)")
         // preview (default is story
-        self.previewView = UIView(frame: CGRect(x: 0, y: 40, width: screenBounds.width, height: screenBounds.width*1.77777777))
+        if UIDevice.current.hasNotch {
+            self.previewView = UIView(frame: CGRect(x: 0, y: 40, width: screenBounds.width, height: screenBounds.width*1.77777777))
+        } else {
+            self.previewView = UIView(frame: CGRect(x: 0, y: 0, width: screenBounds.width, height: screenBounds.width*1.5))
+        }
         if let previewView = self.previewView {
             previewView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             previewView.layer.cornerRadius = Constants.borderRadius
             previewView.clipsToBounds = true
             previewView.backgroundColor = UIColor.black
             NextLevel.shared.previewLayer.frame = previewView.bounds
-            NextLevel.shared.flashMode = .auto
             previewView.layer.addSublayer(NextLevel.shared.previewLayer)
-            
+            NextLevel.shared.flashMode = .auto
             self.view.addSubview(previewView)
         }
         
@@ -186,6 +205,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             recordButton.layer.cornerRadius = recordButton.frame.width / 2
             recordButton.layer.borderColor = hexStringToUIColor(hex: Constants.primaryColor).cgColor
             recordButton.layer.borderWidth = 2
+            recordButton.isUserInteractionEnabled = true
             longPressGestureRecognizer.delegate = self
             longPressGestureRecognizer.minimumPressDuration = 0.05
             longPressGestureRecognizer.allowableMovement = 10.0
@@ -199,12 +219,13 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             actualPostButton.layer.shadowOffset = CGSize(width: 4, height: 10)
             actualPostButton.layer.shadowOpacity = 0.5
             actualPostButton.layer.shadowRadius = 4
-            actualPostButton.titleLabel!.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            actualPostButton.titleLabel!.font = UIFont(name: Constants.globalFontBold, size: 13)
             actualPostButton.setTitle("Post", for: .normal)
             actualPostButton.alpha = 0
             actualPostButton.titleLabel?.textColor = .white
             actualPostButton.backgroundColor = hexStringToUIColor(hex:Constants.primaryColor)
             actualPostButton.addTarget(self, action: #selector(handlePostButton(_:)), for: .touchUpInside)
+            actualPostButton.isUserInteractionEnabled = true
             self.view.addSubview(actualPostButton)
         }
         self.nextButton = UIButton(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
@@ -215,10 +236,11 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             nextButton.layer.shadowOffset = CGSize(width: 4, height: 10)
             nextButton.layer.shadowOpacity = 0.5
             nextButton.layer.shadowRadius = 4
-            nextButton.titleLabel!.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            nextButton.titleLabel!.font = UIFont(name: Constants.globalFontBold, size: 13)
             nextButton.setTitle("Next", for: .normal)
             nextButton.addTarget(self, action: #selector(handleNextButton(_:)), for: .touchUpInside)
             nextButton.setTitleColor(.white, for: .normal)
+            nextButton.isUserInteractionEnabled = true
         }
         self.stepNameLabel = UILabel(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
         if let stepNameLabel = stepNameLabel {
@@ -227,12 +249,13 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             stepNameLabel.text = "Choose Filter"
             let stepNameWidth = 100
             stepNameLabel.frame = CGRect(x: CGFloat((Int(Float16(UIScreen.main.bounds.width)) / 2) - stepNameWidth/2), y: (previewView?.frame.minY)! + 20, width: CGFloat(stepNameWidth), height: 40)
-            stepNameLabel.font = UIFont(name: Constants.globalFont, size: 16)
+            stepNameLabel.font = UIFont(name: Constants.globalFont, size: 15)
         }
         self.flipButton = UIButton(type: .custom)
         if let flipButton = self.flipButton {
             flipButton.setImage(UIImage(named: "flip_button"), for: .normal)
             flipButton.sizeToFit()
+            flipButton.isUserInteractionEnabled = true
             flipButton.addTarget(self, action: #selector(handleFlipButton(_:)), for: .touchUpInside)
         }
 
@@ -289,7 +312,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             AddLocationTextField = UITextField(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
             if let AddLocationTextField = AddLocationTextField {
                 AddLocationTextField.backgroundColor = .clear
-                AddLocationTextField.font = UIFont(name: Constants.globalFont, size: 14)
+                AddLocationTextField.font = UIFont(name: Constants.globalFont, size: 13)
                 AddLocationTextField.attributedPlaceholder = NSAttributedString(string: "Enter a location",
                                              attributes: [NSAttributedString.Key.foregroundColor: UIColor.lightGray])
                 AddLocationTextField.textColor = .white
@@ -303,7 +326,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
                 distanceAway.textColor = .lightGray
                 distanceAway.text = ""
                 distanceAway.frame = CGRect(x: (addLocationIcon?.frame.maxX)!+10, y: 10, width: 60, height: 10)
-                distanceAway.font = UIFont(name: Constants.globalFont, size: 10)
+                distanceAway.font = UIFont(name: Constants.globalFont, size: 9)
                 AddLocationView.addSubview(distanceAway)
             }
             AddLocationView.backgroundColor = .darkGray.withAlphaComponent(0.5)
@@ -311,6 +334,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             AddLocationView.alpha = 0
             let locationTapped = UITapGestureRecognizer(target: self, action: #selector(handleLocationViewTapped(_:)))
             AddLocationView.addGestureRecognizer(locationTapped)
+            AddLocationView.isUserInteractionEnabled = true
 //            AddLocationTextField?.addGestureRecognizer(locationTapped)
             self.view.addSubview(AddLocationView)
         }
@@ -330,7 +354,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             AddPeopleTextField = UITextField(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
             if let AddPeopleTextField = AddPeopleTextField {
                 AddPeopleTextField.backgroundColor = .clear
-                AddPeopleTextField.font = UIFont(name: Constants.globalFont, size: 14)
+                AddPeopleTextField.font = UIFont(name: Constants.globalFont, size: 13)
                 AddPeopleTextField.attributedPlaceholder = NSAttributedString(string: "Tag People - Coming soon :P",
                                              attributes: [NSAttributedString.Key.foregroundColor: UIColor.lightGray])
                 AddPeopleTextField.textColor = .white
@@ -373,7 +397,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             AddTagsTextField = UITextField(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
             if let AddTagsTextField = AddTagsTextField {
                 AddTagsTextField.backgroundColor = .clear
-                AddTagsTextField.font = UIFont(name: Constants.globalFont, size: 14)
+                AddTagsTextField.font = UIFont(name: Constants.globalFont, size: 13)
                 AddTagsTextField.attributedPlaceholder = NSAttributedString(string: "Hashtags - Coming soon :P",
                                              attributes: [NSAttributedString.Key.foregroundColor: UIColor.lightGray])
                 AddTagsTextField.textColor = .white
@@ -421,6 +445,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             }
             let flashToggle = UITapGestureRecognizer(target: self, action: #selector(handleFlashButton(_:)))
             flashButton.addGestureRecognizer(flashToggle)
+            flashButton.isUserInteractionEnabled = true
             self.view.addSubview(flashButton)
             
         }
@@ -432,6 +457,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             goBackButton.setTitleColor(.white, for: .normal)
             goBackButton.tintColor = .white
             goBackButton.backgroundColor = .darkGray.withAlphaComponent(0.5)
+            goBackButton.isUserInteractionEnabled = true
             goBackButton.layer.cornerRadius = Constants.borderRadius
         }
         self.closeButton = UIButton(type: .custom)
@@ -442,6 +468,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             closeButton.setTitleColor(.white, for: .normal)
             closeButton.tintColor = .white
             closeButton.backgroundColor = .clear
+            closeButton.isUserInteractionEnabled = true
             self.view.addSubview(closeButton)
         }
         let layout = UICollectionViewFlowLayout()
@@ -462,46 +489,82 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
         if let menubarUIView = menubarUIView {
             menubarUIView.backgroundColor = .black
             self.view.addSubview(menubarUIView)
-            let LeftAndRightPaddingInView = 80
-            let PaddingBetweenEachother = 10
-            let buttonWidths = (Int(UIScreen.main.bounds.width) - (LeftAndRightPaddingInView*2) - (PaddingBetweenEachother * 2)) / 3
+            
+//            let LeftAndRightPaddingInView = 80
+//            let PaddingBetweenEachother = 10
+//            let buttonWidths = (Int(UIScreen.main.bounds.width) - (LeftAndRightPaddingInView*2) - (PaddingBetweenEachother * 2)) / 3
+            
+            let LeftAndRightPaddingInView = 100
+            let PaddingBetweenEachother = 0
+            let buttonWidths = 100
             let buttonY = 0
             let buttonHeights = menubarUIView.frame.height - 10
             
-            let postButton = UIButton(frame: CGRect(x: LeftAndRightPaddingInView, y: buttonY, width: buttonWidths, height: Int(buttonHeights)))
+//            let postButton = UIButton(frame: CGRect(x: LeftAndRightPaddingInView, y: buttonY, width: buttonWidths, height: Int(buttonHeights)))
+            let postButton = UIButton(frame: CGRect(x: (Int(UIScreen.main.bounds.width) / 2) - buttonWidths, y: buttonY, width: buttonWidths, height: Int(buttonHeights)))
+            
             postButton.tintColor = UIColor.white.withAlphaComponent(0.4)
             postButton.backgroundColor = UIColor.clear
             postButton.setTitle("POST", for: .normal)
-            postButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            postButton.titleLabel?.font = UIFont(name: Constants.globalFontBold, size: 13)
+            postButton.isUserInteractionEnabled = true
             postButton.setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
             
-            let storyButton = UIButton(frame: CGRect(x: Int(postButton.frame.maxX) + PaddingBetweenEachother, y: buttonY, width: buttonWidths, height: Int(buttonHeights)))
+//            let storyButton = UIButton(frame: CGRect(x: Int(postButton.frame.maxX) + PaddingBetweenEachother, y: buttonY, width: buttonWidths, height: Int(buttonHeights)))
+            let storyButton = UIButton(frame: CGRect(x: Int(UIScreen.main.bounds.width) / 2, y: buttonY, width: buttonWidths, height: Int(buttonHeights)))
             storyButton.tintColor = UIColor.white
             storyButton.backgroundColor = UIColor.clear
             storyButton.setTitle("STORY", for: .normal)
-            storyButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            storyButton.titleLabel?.font = UIFont(name: Constants.globalFontBold, size: 13)
+            storyButton.isUserInteractionEnabled = true
             storyButton.setTitleColor(UIColor.white.withAlphaComponent(1), for: .normal)
             
             let textButton = UIButton(frame: CGRect(x: Int(storyButton.frame.maxX) + PaddingBetweenEachother, y: buttonY, width: buttonWidths, height: Int(buttonHeights)))
             textButton.tintColor = UIColor.white.withAlphaComponent(0.4)
             textButton.backgroundColor = UIColor.clear
-            textButton.setTitle("STATUS", for: .normal)
-            textButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+            textButton.setTitle("GLIMPSE", for: .normal)
+            textButton.isHidden = true // REMOVE THIS TO SHOW GLIMPSE BUITTON
+            textButton.titleLabel?.font = UIFont(name: Constants.globalFontBold, size: 13)
             textButton.setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
             
             
             postButton.addTarget(self, action: #selector(menuButtonTapped), for: .touchUpInside)
             storyButton.addTarget(self, action: #selector(menuButtonTapped), for: .touchUpInside)
             textButton.addTarget(self, action: #selector(menuButtonTapped), for: .touchUpInside)
-
-            self.menubarUIView?.addSubview(postButton)
-            self.menubarUIView?.addSubview(storyButton)
-            self.menubarUIView?.addSubview(textButton)
+            self.glimpsView = UIView(frame: CGRect(x: 0, y: Int(textButton.frame.minY) + 25, width: 30, height: 15))
+            if let glimpsView = self.glimpsView {
+                glimpsView.backgroundColor = Constants.secondaryColor.hexToUiColor()
+                glimpsView.layer.cornerRadius = 4
+                glimpsView.clipsToBounds = true
+                glimpsView.isUserInteractionEnabled = false
+                self.gimpsText = UILabel(frame: CGRect(x: 0, y: 0, width: glimpsView.frame.width, height: glimpsView.frame.height))
+                if let gimpsText = gimpsText {
+                    gimpsText.text = "NEW"
+                    gimpsText.textAlignment = .center
+                    gimpsText.font = UIFont(name: Constants.globalFontBold, size: 7)
+                    gimpsText.textColor = Constants.primaryColor.hexToUiColor()
+                    glimpsView.addSubview(gimpsText)
+                    self.glimpsLogo = UIImageView(frame: CGRect(x: gimpsText.frame.maxX, y: 0, width: 10, height: glimpsView.frame.height))
+                    if let glimpsLogo = self.glimpsLogo {
+                        glimpsLogo.image = UIImage(systemName: "timelapse")?.applyingSymbolConfiguration(.init(pointSize: 12, weight: .medium, scale: .medium))?.image(withTintColor: Constants.primaryColor.hexToUiColor())
+                        glimpsLogo.contentMode = .scaleAspectFit
+//                        glimpsView.addSubview(glimpsLogo)
+                    }
+                    
+                }
+                glimpsView.center.x = textButton.center.x
+                self.menubarUIView?.addSubview(postButton)
+                self.menubarUIView?.addSubview(storyButton)
+                self.menubarUIView?.addSubview(textButton)
+//                self.menubarUIView?.addSubview(glimpsView)
+                
+            }
             
             
             
             let littleBarHeight = 2
-            self.littleBottomBar = UIView(frame: CGRect(x: 0, y: (Int(buttonHeights) / 2) + 10, width: buttonWidths - 10, height: littleBarHeight))
+//            self.littleBottomBar = UIView(frame: CGRect(x: 0, y: (Int(buttonHeights) / 2) + 10, width: buttonWidths - 10, height: littleBarHeight))
+            self.littleBottomBar = UIView(frame: CGRect(x: 0, y: (Int(buttonHeights) / 2) + 10, width: buttonWidths - 40, height: littleBarHeight))
             self.littleBottomBar?.center.x = storyButton.center.x
             self.littleBottomBar?.backgroundColor = .white
             self.littleBottomBar?.layer.cornerRadius = 4
@@ -511,7 +574,8 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             
             if let flipButton = self.flipButton, let recordButton = self.recordButton {
 //                let flipButtonWidth = UIScreen.main.bounds.width - textButton.frame.maxX - PaddingBetweenEachother - (PaddingBetweenEachother*2)
-                flipButton.frame = CGRect(x: Int(textButton.frame.maxX) + LeftAndRightPaddingInView / 4, y: 30, width: 40, height: 40)
+//                flipButton.frame = CGRect(x: Int(textButton.frame.maxX) + LeftAndRightPaddingInView / 4, y: 30, width: 40, height: 40)
+                flipButton.frame = CGRect(x: UIScreen.main.bounds.width - 40 - 25, y: 30, width: 40, height: 40)
                 flipButton.backgroundColor = .darkGray.withAlphaComponent(0.5)
                 flipButton.center.y = (postButton.center.y)
                 flipButton.layer.cornerRadius = flipButton.frame.width / 2
@@ -551,10 +615,11 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
 //            handlePhotoTapGestureRecognizer
             let tapTakePhoto = UITapGestureRecognizer(target: self, action: #selector(handlePhotoTapGestureRecognizer(_:)))
             snapPicButton.addGestureRecognizer(tapTakePhoto)
+            snapPicButton.isUserInteractionEnabled = true
             self.view.addSubview(snapPicButton)
         }
         // gestures
-        self.gestureView = UIView(frame: screenBounds)
+        self.gestureView = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
         if let gestureView = self.gestureView, let controlDockView = self.controlDockView {
             gestureView.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
             gestureView.frame.size.height -= controlDockView.frame.height
@@ -595,15 +660,27 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
         nextLevel.audioConfiguration.bitRate = 96000
 
         // metadata objects configuration
-        nextLevel.metadataObjectTypes = [] //AVMetadataObject.ObjectType.face, AVMetadataObject.ObjectType.qr
+        nextLevel.metadataObjectTypes = [AVMetadataObject.ObjectType.qr] //AVMetadataObject.ObjectType.face, AVMetadataObject.ObjectType.qr
         
         
         // double tap to reverse camera
         let tap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped))
         tap.numberOfTapsRequired = 2
         self.previewView?.addGestureRecognizer(tap)
+        do {
+//            try NextLevel.shared.start()
+            NextLevel.shared.flashMode = .auto
+        } catch {
+            print("* some error starting nextlevel \(error)")
+        }
         
-        NextLevel.shared.flipCaptureDevicePosition()
+//
+        let seconds = 0.3
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+            // Put your code which should be executed with a delay here
+//            NextLevel.shared.flipCaptureDevicePosition()
+            NextLevel.shared.devicePosition = .front
+        }
         searchCompleter.resultTypes = MKLocalSearchCompleter.ResultType([.pointOfInterest])
     }
     func toggleTorch(on: Bool) {
@@ -623,6 +700,31 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
     func randomString(length: Int) -> String {
       let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
       return String((0..<length).map{ _ in letters.randomElement()! })
+    }
+    func uploadPic(image: UIImage, completion: @escaping (_ url: String?, _ locationUID: String?) -> Void) {
+        let userID : String = (Auth.auth().currentUser?.uid)!
+        let randomString = randomString(length: 20)
+        let storageRef = Storage.storage().reference().child("post_photos/\(userID)/\(randomString)")
+//        guard let imageData = cameraPhotoResult!.image!.jpegData(compressionQuality: 0.75) else { return }
+        print("* cropped image")
+        guard let imageData = image.nx_croppedImage(to: 1.25).jpegData(compressionQuality: 0.75) else { return }
+        let metaData = StorageMetadata()
+        metaData.contentType = "image/jpg"
+        // Add a progress observer to an upload task
+        
+        let uploadTask = storageRef.putData(imageData, metadata: metaData) { metaData, error in
+            if error == nil, metaData != nil {
+                
+                storageRef.downloadURL { url, error in
+                    completion(url?.absoluteString, randomString)
+                    // success!
+                }
+            } else {
+                // failed
+                completion(nil, nil)
+            }
+        }
+        
     }
     func uploadPostMedia(completion: @escaping (_ url: String?, _ locationUID: String?) -> Void) {
         let userID : String = (Auth.auth().currentUser?.uid)!
@@ -684,6 +786,9 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
                     self.captionView?.fadeIn()
                     self.AddPeopleView?.fadeIn()
                     self.AddTagsView?.fadeIn()
+                    if self.numOfImageLabel?.text ?? "" != "" && self.numOfImageLabel?.text ?? "" != "1" && self.numOfImageLabel?.text ?? "" != "0" {
+                        self.numOfImageLabel?.fadeIn()
+                    }
                 }
         }
     }
@@ -698,8 +803,13 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
         
 //            present(imagePicker, animated: true)
         let config = ZLPhotoConfiguration.default()
+        if self.postType == "post" {
+            config.maxSelectCount = 9
+        } else {
+            config.maxSelectCount = 1
+        }
         config.columnCount = 3
-        config.maxSelectCount = 9
+        
         config.sortAscending = true
         config.allowSelectVideo = false
         config.showSelectedBorder = true
@@ -711,7 +821,8 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
         let ps = ZLPhotoPreviewSheet()
         ps.selectImageBlock = { [weak self] results, isOriginal in
             guard let `self` = self else { return }
-//            self.selectedImages = results.map { $0.image }
+            let selectedImages = results.map { $0.image.nx_croppedImage(to: 1.25) }
+            self.postPhotos = selectedImages
 //            self.selectedAssets = results.map { $0.asset }
 //            self.isOriginal = isOriginal
 //            self.collectionView.reloadData()
@@ -722,19 +833,49 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             if results.count != 0 {
 //                self.showPostDetailOptions()
                 if self.postType == "post" {
-                    self.cameraPhotoResult = UIImageView(image: results[0].image)
+//                    self.cameraPhotoResult = UIImageView(image: results[0].image)
                     print("* preview frame: \(self.previewView!.frame)")
+//                    self.cameraPhotoResult?.frame = self.previewView!.frame
+//                    self.cameraPhotoResult?.layer.cornerRadius = (self.previewView?.layer.cornerRadius)!
+//                    self.cameraPhotoResult?.clipsToBounds = true
+                    self.cameraPhotoResult = UIImageView(image: selectedImages[0])
+                    self.OriginalPostImageForFiltering = selectedImages[0]
                     self.cameraPhotoResult?.frame = self.previewView!.frame
                     self.cameraPhotoResult?.layer.cornerRadius = (self.previewView?.layer.cornerRadius)!
                     self.cameraPhotoResult?.clipsToBounds = true
-                    self.uploadedFromCameraRoll = true
+                    
+                    self.cameraPhotoResult?.image = selectedImages[0]
+                    self.cameraPhotoResult?.contentMode = .scaleAspectFill
+                    
+                    self.view.addSubview(self.cameraPhotoResult!)
+                    self.view?.sendSubviewToBack(self.cameraPhotoResult!)
+                    self.view.addSubview(self.goBackButton!)
+                    self.view.addSubview(self.stepNameLabel!)
                     self.hideAllPhotoComponents()
                     self.showPostDetailOptions()
-                    self.goBackButton?.fadeIn()
-                    self.stepNameLabel?.fadeIn()
+                    if results.count > 1 {
+                        print("* more than one image selecting, adding number counter")
+                        let tmpWid = 20
+                        self.numOfImageLabel = UILabel(frame: CGRect(x: Int(self.cameraPhotoResult?.frame.maxX ?? 0) - tmpWid - 5, y: Int(self.cameraPhotoResult?.frame.minY ?? 0) + 5, width: tmpWid, height: tmpWid))
+                        print("* numOfimageLabel frame \(self.numOfImageLabel?.frame)")
+                        self.numOfImageLabel?.textColor = .white
+                        self.numOfImageLabel?.textAlignment = .center
+                        self.numOfImageLabel?.backgroundColor = Constants.primaryColor.hexToUiColor()
+                        self.numOfImageLabel?.font = UIFont(name: Constants.globalFontMedium, size: 13)
+                        self.numOfImageLabel?.text = "\(results.count)"
+                        self.numOfImageLabel?.layer.cornerRadius = 4
+                        self.numOfImageLabel?.clipsToBounds = true
+//                        self.numOfImageLabel?.alpha = 0
+                        if let numOfImageLabel = self.numOfImageLabel {
+                            print("* adding subview: \(self.numOfImageLabel?.text)")
+                            self.view.addSubview(numOfImageLabel)
+//                            numOfImageLabel.fadeIn()
+                        }
+                    }
                 } else {
                     print("* story post")
-                    
+                    self.hideAllPhotoComponents()
+                    self.doneEditing(image: results[0].image)
                 }
             }
             
@@ -818,7 +959,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             captionView?.fadeOut()
             AddPeopleView?.fadeOut()
             AddTagsView?.fadeOut()
-            
+            numOfImageLabel?.fadeOut()
             UIView.animate(withDuration: 0.2, animations: {
                     self.view.layoutIfNeeded() // add this
                 self.AddLocationView?.frame = CGRect(x: (self.AddLocationView?.frame.minX)!, y: self.goBackButton?.frame.minY ?? 0, width: self.AddLocationView!.frame.width, height: self.AddLocationView?.frame.height ?? 0)
@@ -834,6 +975,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
     @objc internal func handleFlashButton(_ button: UIButton) {
         let generator = UIImpactFeedbackGenerator(style: .medium)
                     generator.impactOccurred()
+        print("* current flash mode: \(NextLevel.shared.flashMode)")
         if NextLevel.shared.flashMode == .auto {
             print("* setting flash mode to on")
             NextLevel.shared.flashMode = .on
@@ -906,7 +1048,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             cell.textLabel?.text = AddLocationTextField?.text ?? ""
             cell.detailTextLabel?.text = ""
             cell.textLabel?.textColor = .white
-            if let font = UIFont(name: "\(String(describing: cell.textLabel?.font))", size: 16) {
+            if let font = UIFont(name: "\(String(describing: cell.textLabel?.font))", size: 15) {
                 cell.textLabel?.font = font
             }
             
@@ -935,20 +1077,23 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
                 }
                 
                 // Use your location
-                let distanceInMeters = location.distance(from: self.locationManager.location!)
-                print("* got distance in meters from current location: \(distanceInMeters)")
-                if(distanceInMeters <= 1609)
-                 {
-                 // under 1 mile
-                    self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row-1].title)"
-                    self.distanceAway?.text = "\(Int(distanceInMeters*3.28084)) feet away"
-                 }
-                 else
-                {
-                 // out of 1 mile
-                     self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row-1].title)"
-                     self.distanceAway?.text = "\(Int(distanceInMeters*0.000621371)) miles away"
-                 }
+                if let loc = self.locationManager.location {
+                    let distanceInMeters = location.distance(from: loc)
+                    print("* got distance in meters from current location: \(distanceInMeters)")
+                    if(distanceInMeters <= 1609)
+                     {
+                     // under 1 mile
+                        self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row-1].title)"
+                        self.distanceAway?.text = "\(Int(distanceInMeters*3.28084)) feet away"
+                     }
+                     else
+                    {
+                     // out of 1 mile
+                         self.AddLocationTextField?.text = "\(self.searchCompleter.results[indexPath.row-1].title)"
+                         self.distanceAway?.text = "\(Int(distanceInMeters*0.000621371)) miles away"
+                     }
+                }
+                
             }
         } else {
             
@@ -963,7 +1108,7 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
         let attributedText = NSMutableAttributedString(string: text)
         let regular = UIFont.systemFont(ofSize: size)
         attributedText.addAttribute(NSAttributedString.Key.font, value:regular, range:NSMakeRange(0, text.count))
-        attributedText.addAttribute(NSAttributedString.Key.font, value: UIFont(name: "\(Constants.globalFont)", size: 16)!, range:NSMakeRange(0, text.count))
+        attributedText.addAttribute(NSAttributedString.Key.font, value: UIFont(name: "\(Constants.globalFont)", size: 15)!, range:NSMakeRange(0, text.count))
         attributedText.addAttribute(NSAttributedString.Key.foregroundColor, value:UIColor.darkGray, range: NSMakeRange(0, text.count))
         for value in ranges {
             //            attributedText.addAttribute(NSAttributedString.Key.font, value:bold, range:value.rangeValue)
@@ -989,7 +1134,8 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
                     generator.impactOccurred()
         UIView.animate(withDuration: 0.2, delay: 0.0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0.5, options: .curveEaseInOut, animations: {
                 self.view.layoutIfNeeded() // add this
-            self.littleBottomBar?.frame = CGRect(x: sender.frame.minX + 5, y: CGFloat((Int(sender.frame.height) / 2) + 10), width: sender.frame.width - 10, height: self.littleBottomBar!.frame.height)
+//            self.littleBottomBar?.frame = CGRect(x: sender.frame.minX + 5, y: CGFloat((Int(sender.frame.height) / 2) + 10), width: self.littleBottomBar!.frame.width, height: self.littleBottomBar!.frame.height)
+            self.littleBottomBar?.center.x = sender.center.x
 
             }) { (success) in
                 self.view.layoutIfNeeded()
@@ -1002,11 +1148,21 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
             (menubarUIView?.subviews[2] as! UIButton).setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
             UIView.animate(withDuration: 0.3, animations: {
                     self.view.layoutIfNeeded() // add this
-                self.previewView?.frame = CGRect(x: (self.previewView?.frame.minX)!, y: (self.closeButton?.frame.maxY)! + 20, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.25)
+                if UIDevice.current.hasNotch {
+                    self.previewView?.frame = CGRect(x: (self.previewView?.frame.minX)!, y: (self.closeButton?.frame.maxY)! + 20, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.25)
+                } else {
+                    self.previewView?.frame = CGRect(x: (self.previewView?.frame.minX)!, y: (self.closeButton?.frame.minY)!, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.25)
+                }
+                
                 NextLevel.shared.previewLayer.frame = self.previewView!.bounds
 //                self.previewView?.frame = CGRect(x: (self.previewView?.frame.minX)!, y: (self.previewView?.frame.minY)!, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.4)
                 let snapX = (Int(Float16(UIScreen.main.bounds.width)) / 2) - ((80) / 2)
-                self.snapPicButton?.frame = CGRect(x: snapX, y: Int((self.previewView?.frame.maxY)!) + 30, width: 80, height: 80)
+                if UIDevice.current.hasNotch {
+                    self.snapPicButton?.frame = CGRect(x: snapX, y: Int((self.previewView?.frame.maxY)!) + 30, width: 80, height: 80)
+                } else {
+                    self.snapPicButton?.frame = CGRect(x: snapX, y: Int((self.previewView?.frame.maxY)!) - 40, width: 80, height: 80)
+                }
+                
 //                let distanceForButton = Int(UIScreen.main.bounds.height) - Int(self.menubarUIView?.frame.height ?? 0) - Int((self.previewView?.frame.maxY)!)
 //                let snapPicWidthHeight = distanceForButton // used to be 80
 //                let snapX = (Int(Float16(UIScreen.main.bounds.width)) / 2) - ((snapPicWidthHeight) / 2)
@@ -1038,11 +1194,168 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
                     
                 }
         } else {
-            print("text menu bar button tapped")
-            postType = "status"
+            print("glimpse menu bar button tapped")
+            postType = "glimpse"
             (menubarUIView?.subviews[0] as! UIButton).setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
             (menubarUIView?.subviews[1] as! UIButton).setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
             (menubarUIView?.subviews[2] as! UIButton).setTitleColor(UIColor.white.withAlphaComponent(1), for: .normal)
+            let config = ZLPhotoConfiguration.default()
+            config.maxSelectCount = 30
+            config.columnCount = 3
+            
+            config.sortAscending = true
+            config.allowSelectVideo = false
+            config.showSelectedBorder = true
+            config.cellCornerRadio = 8
+            config.allowSelectOriginal = false
+            config.saveNewImageAfterEdit = false
+            config.editImageConfiguration.clipRatios = [ZLImageClipRatio(title: "Default", whRatio: 1.25)]
+    //        hideAllPhotoComponents()
+            let ps = ZLPhotoPreviewSheet()
+            ps.selectImageBlock = { [weak self] results, isOriginal in
+                guard let `self` = self else { return }
+                let selectedImages = results.map { $0.image }
+                var tmp: [UIImage] = []
+                for im in selectedImages {
+//                    let tt = self.resizeImage(image: im.nx_croppedImage(to: 1.25), newWidth: UIScreen.main.bounds.width, newHeight: UIScreen.main.bounds.width*1.25)
+                    let tt = self.ResizeImage(with: im, scaledToFill: CGSize(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width*1.25))
+                    tmp.append(tt!)
+                }
+                
+                self.postPhotos = tmp
+    //            self.selectedAssets = results.map { $0.asset }
+    //            self.isOriginal = isOriginal
+    //            self.collectionView.reloadData()
+                debugPrint("# images: \(results.count)")
+    //            debugPrint("assets: \(self.selectedAssets)")
+                debugPrint("isEdited: \(results.map { $0.isEdited })")
+                debugPrint("isOriginal: \(isOriginal)")
+                if results.count != 0 {
+                    print("* got images for glimpse post")
+                   
+                    let defaultLengthPerPhoto = 1.5 // in seconds
+                    print("* loading in initial gif stuff with default length (s) \(defaultLengthPerPhoto)")
+                    self.updateGif(lengthPerImage: defaultLengthPerPhoto, shouldFadeInOut: false, transitionLength: 0)
+                    do {
+//                        let gif = try UIImage(gifName: "animated.gif")
+                        let documentsDirectoryURL: URL? = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                        let fileURL: URL? = documentsDirectoryURL?.appendingPathComponent("animated.gif")
+                        print("* loading via \(fileURL)")
+//                        self.cameraPhotoResult = UIImageView(gifImage: gif, loopCount: -1)
+                        if let fileURL = fileURL {
+                            self.hideAllPhotoComponents()
+                            let screenBounds = UIScreen.main.bounds
+                            self.cameraPhotoResult = UIImageView(frame: CGRect(x: 0, y: 120, width: screenBounds.width, height: screenBounds.width*1.25))
+                            if let cameraPhotoResult = self.cameraPhotoResult {
+                                cameraPhotoResult.setGifFromURL(fileURL)
+    //                            self.cameraPhotoResult?.image = UIImage(named: "appleIcon")
+                                cameraPhotoResult.layer.cornerRadius = 12
+                                cameraPhotoResult.clipsToBounds = true
+                                cameraPhotoResult.contentMode = .scaleAspectFill
+                                self.goBackButton?.alpha = 0
+                                self.view.addSubview(self.goBackButton!)
+                                self.goBackButton?.fadeIn()
+                                cameraPhotoResult.fadeIn()
+                                print("* valid gif, loading in")
+                                self.view.addSubview((cameraPhotoResult))
+                                (self.menubarUIView?.subviews[0] as! UIButton).setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
+                                (self.menubarUIView?.subviews[1] as! UIButton).setTitleColor(UIColor.white.withAlphaComponent(1), for: .normal)
+                                (self.menubarUIView?.subviews[2] as! UIButton).setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
+                            }
+                                
+                        } else {
+                            (self.menubarUIView?.subviews[1] as! UIButton).sendActions(for: .touchUpInside)
+                        }
+                        
+                    } catch {
+                        print("* some error in do: \(error)")
+                        (self.menubarUIView?.subviews[1] as! UIButton).sendActions(for: .touchUpInside)
+                    }
+                } else {
+                    (self.menubarUIView?.subviews[1] as! UIButton).sendActions(for: .touchUpInside)
+                }
+            }
+            ps.cancelBlock = {
+//                    guard let `self` = self else { return }
+                (self.menubarUIView?.subviews[1] as! UIButton).sendActions(for: .touchUpInside)
+            }
+            ps.showPhotoLibrary(sender: self)
+        }
+    }
+    func resizeImage(image: UIImage, newWidth: CGFloat, newHeight: CGFloat) -> UIImage {
+
+       let scale = newWidth / image.size.width
+//       let newHeight = image.size.height * scale
+       UIGraphicsBeginImageContext(CGSizeMake(newWidth, newHeight))
+        image.draw(in: CGRectMake(0, 0, newWidth, newHeight))
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()!
+       UIGraphicsEndImageContext()
+
+       return newImage
+   }
+    func ResizeImage(with image: UIImage?, scaledToFill size: CGSize) -> UIImage? {
+        let scale: CGFloat = max(size.width / (image?.size.width ?? 0.0), size.height / (image?.size.height ?? 0.0))
+        let width: CGFloat = (image?.size.width ?? 0.0) * scale
+        let height: CGFloat = (image?.size.height ?? 0.0) * scale
+        let imageRect = CGRect(x: (size.width - width) / 2.0, y: (size.height - height) / 2.0, width: width, height: height)
+        UIGraphicsBeginImageContextWithOptions(size, false, 0)
+        image?.draw(in: imageRect)
+        let newImage: UIImage? = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return newImage
+    }
+    func updateGif(lengthPerImage: Double, shouldFadeInOut: Bool, transitionLength: Double) {
+        let images = postPhotos
+        let fileProperties: CFDictionary = [kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: 0]]  as CFDictionary
+                let frameProperties: CFDictionary = [kCGImagePropertyGIFDictionary as String: [(kCGImagePropertyGIFDelayTime as String): lengthPerImage]] as CFDictionary
+                
+                let documentsDirectoryURL: URL? = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                let fileURL: URL? = documentsDirectoryURL?.appendingPathComponent("animated.gif")
+                
+                if let url = fileURL as CFURL? {
+                    if let destination = CGImageDestinationCreateWithURL(url, kUTTypeGIF, images.count, nil) {
+                        CGImageDestinationSetProperties(destination, fileProperties)
+                        for image in images {
+                            if let cgImage = image.cgImage {
+                                CGImageDestinationAddImage(destination, cgImage, frameProperties)
+                            }
+                        }
+                        if !CGImageDestinationFinalize(destination) {
+                            print("Failed to finalize the image destination")
+                        }
+                        print("Updated gif @ Url = \(fileURL)")
+                    }
+                }
+        
+    }
+    func deleteGif() {
+        let fileNameToDelete = "animated.gif"
+        var filePath = ""
+        // Fine documents directory on device
+         let dirs : [String] = NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.documentDirectory, FileManager.SearchPathDomainMask.allDomainsMask, true)
+        if dirs.count > 0 {
+            let dir = dirs[0] //documents directory
+            filePath = dir.appendingFormat("/" + fileNameToDelete)
+            print("Local path = \(filePath)")
+         
+        } else {
+            print("Could not find local directory to store file")
+            return
+        }
+        do {
+             let fileManager = FileManager.default
+            
+            // Check if file exists
+            if fileManager.fileExists(atPath: filePath) {
+                // Delete file
+                try fileManager.removeItem(atPath: filePath)
+            } else {
+                print("File does not exist")
+            }
+         
+        }
+        catch let error as NSError {
+            print("An error took place: \(error)")
         }
     }
     func hexStringToUIColor (hex:String) -> UIColor {
@@ -1131,6 +1444,9 @@ class CameraViewController: UIViewController, UICollectionViewDelegate, UICollec
            NextLevel.authorizationStatus(forMediaType: AVMediaType.audio) == .authorized {
             do {
                 try NextLevel.shared.start()
+                NextLevel.shared.flashMode = .auto
+                print("* next LEVEL flash avail: \(NextLevel.shared.isFlashAvailable)")
+                print("* next LEVEL flash mode: \(NextLevel.shared.flashMode)")
             } catch {
                 print("NextLevel, failed to start camera session")
             }
@@ -1474,7 +1790,9 @@ extension CameraViewController {
         
         AddLocationTextField?.frame = CGRect(x: Int((addLocationIcon?.frame.maxX)! + CGFloat(dif)), y: dif, width: Int((AddLocationView?.frame.width)! - (addLocationIcon?.frame.maxY)!) - 10, height: 50-dif*2)
         self.distanceAway!.text = ""
+        
         if stepName == "Choose Filter" {
+            deleteGif()
             UIView.animate(withDuration: 0.3, animations: { [self] in
                 self.view.layoutIfNeeded()
                 cameraPhotoResult?.alpha = 0
@@ -1518,9 +1836,10 @@ extension CameraViewController {
                 AddPeopleView?.alpha = 0
                 AddLocationView?.alpha = 0
                 AddTagsView?.alpha = 0
-                
+                numOfImageLabel?.alpha = 0
             }) { [self] (success) in
                 self.view.layoutIfNeeded()
+                self.numOfImageLabel?.removeFromSuperview()
                 self.showAllPhotoComponents()
             }
            
@@ -1553,7 +1872,7 @@ extension CameraViewController {
         self.stepNameLabel?.text = "New Post"
         self.captionView!.textContainerInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
         self.captionView!.textColor = UIColor.lightGray
-        self.captionView?.font = UIFont(name: Constants.globalFont, size: 14)
+        self.captionView?.font = UIFont(name: Constants.globalFont, size: 13)
         
         self.stepNameLabel?.fadeIn()
         self.hideKeyboardWhenTappedAround()
@@ -1625,17 +1944,7 @@ extension CameraViewController {
         goBackButton?.isUserInteractionEnabled = false
         AddPeopleView?.isUserInteractionEnabled = false
     }
-    @objc internal func handlePostButton(_ button: UIButton) {
-        print("* posting photo")
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        actualPostButton?.isUserInteractionEnabled = false
-        actualPostButton?.setAnimation(LoadyAnimationType.backgroundHighlighter())
-        actualPostButton?.backgroundColor = hexStringToUIColor(hex: Constants.secondaryColor)
-        actualPostButton?.backgroundFillColor = hexStringToUIColor(hex: Constants.primaryColor)
-        // starts loading animation
-        actualPostButton?.startLoading()
-        self.actualPostButton?.setTitle("Uploading", for: .normal)
+    func uploadSinglePostPhoto() {
         let userID : String = (Auth.auth().currentUser?.uid)!
         uploadPostMedia() { url, locationUID in
             guard let url = url else { return }
@@ -1675,31 +1984,126 @@ extension CameraViewController {
             ]) { err in
                 print("* uploading post with image url: \(url)")
                 Analytics.logEvent("uploaded_post", parameters: [
-                  "postAuthor": userID,
+                    "postAuthor": userID, "image_count":1
                 ])
                 self.actualPostButton?.setTitle("Done!", for: .normal)
                 
-                let userID = Auth.auth().currentUser?.uid
-                let followersRef = self.db.collection("followers")
+//                let userID = Auth.auth().currentUser?.uid
+//                let followersRef = self.db.collection("followers")
                 
-                if let navController = self.navigationController, navController.viewControllers.count >= 2 {
-                    let viewController = navController.viewControllers[navController.viewControllers.count - 2]
-                    print("* got parent viewcontroller: \(viewController)")
-                    viewController.tabBarController?.selectedIndex = 0
-                    let feed = viewController as? FeedViewController
-                    feed?.imagePosts?.removeAll()
-                    feed?.documents.removeAll()
-                    feed?.query = followersRef.whereField("followers", arrayContains: userID!).order(by: "last_post", descending: true).limit(to: 3)
-                    
-                    feed?.postsTableView.reloadData()
-                    feed?.getPosts()
-                }
+//                if let navController = self.navigationController, navController.viewControllers.count >= 2 {
+//                    let viewController = navController.viewControllers[navController.viewControllers.count - 2]
+//                    print("* got parent viewcontroller: \(viewController)")
+//                    viewController.tabBarController?.selectedIndex = 0
+//                    let feed = viewController as? FeedViewController
+//                    feed?.imagePosts?.removeAll()
+//                    feed?.documents.removeAll()
+//                    feed?.query = followersRef.whereField("followers", arrayContains: userID!).order(by: "last_post", descending: true).limit(to: 3)
+//
+//                    feed?.postsTableView.reloadData()
+//                    feed?.getPosts()
+//                }
+                UIApplication.shared.refreshFeed()
                 self.dismiss(animated: true)
             }
             
             
             
             
+        }
+    }
+    @objc internal func handlePostButton(_ button: UIButton) {
+        print("* posting photo")
+        let userID : String = (Auth.auth().currentUser?.uid)!
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        actualPostButton?.isUserInteractionEnabled = false
+        actualPostButton?.setAnimation(LoadyAnimationType.backgroundHighlighter())
+        actualPostButton?.backgroundColor = hexStringToUIColor(hex: Constants.secondaryColor)
+        actualPostButton?.backgroundFillColor = hexStringToUIColor(hex: Constants.primaryColor)
+        // starts loading animation
+        actualPostButton?.startLoading()
+        var postimageUrls: [String] = []
+        var refs: [String] = []
+        var locationUIDz = ""
+        var firstImageURL = ""
+        self.actualPostButton?.setTitle("Uploading", for: .normal)
+        if postPhotos.count == 0 {
+            uploadSinglePostPhoto()
+        } else {
+            print("* multiple photos, uploading asynchronously")
+            let mainDispatchGroup = DispatchGroup()
+            var i = 0
+            var completed = 0
+            
+            for post in postPhotos {
+                let postz = post.nx_croppedImage(to: 1.25)
+                mainDispatchGroup.enter()
+                let tmp = i
+                uploadPic(image: postz) { url, locationUID in
+                    guard let url = url else { return }
+                    guard let locationUID = locationUID else {
+                        return
+                    }
+                    if tmp == 0 {
+                        locationUIDz = locationUID
+                        firstImageURL = url
+                    }
+                    if tmp > refs.count {
+                        refs.append(locationUID)
+                    } else {
+                        refs.insert(locationUID, at: tmp)
+                    }
+                    
+                    if tmp > postimageUrls.count {
+                        postimageUrls.append(url)
+                    } else {
+                        postimageUrls.insert(url, at: tmp)
+                    }
+                    completed = completed + 1
+                    let percentComplete = 100.0 * Double(completed) / Double(self.postPhotos.count)
+                    print("* uploading: \(percentComplete)")
+                    self.actualPostButton?.update(percent: percentComplete)
+                    
+                    mainDispatchGroup.leave()
+                }
+                i = i + 1
+            }
+            mainDispatchGroup.notify(queue: .main) {
+                self.actualPostButton?.setTitle("Finishing up...", for: .normal)
+                let timestamp = NSDate().timeIntervalSince1970
+                let ref = self.db.collection("posts").document(userID).collection("posts").document()
+                let documentId = ref.documentID
+                let imageHash = self.postPhotos[0].blurHash(numberOfComponents: (3, 2))
+                print("* calculated image hash: \(imageHash)")
+                print("* posting with images \(postimageUrls)")
+                ref.setData([
+                    "caption"      : (self.captionView?.text ?? "").replacingOccurrences(of: "Enter a caption", with: ""),
+                    "tags"    : [],
+                    "authorID"     : userID,
+                    "createdAt": Int(timestamp),
+                    "location"       : self.AddLocationTextField?.text ?? "",
+                    "imageHash": (imageHash ?? "") as! String,
+                    "postImageUrl" : firstImageURL,
+                    "likes_count": 0,
+                    "comments_count": 0,
+                    "storage_ref": "post_photos/\(userID)/\(locationUIDz)",
+                    "likes": [],
+                    "ext_likes": [],
+                    "fromCameraRoll": self.uploadedFromCameraRoll,
+                    "images": postimageUrls,
+                    "storage_refs": refs
+                ]) { err in
+                    print("* done pushing post!")
+                    Analytics.logEvent("uploaded_post", parameters: [
+                        "postAuthor": userID, "image_count": self.postPhotos.count
+                    ])
+                    self.actualPostButton?.setTitle("Done!", for: .normal)
+                    UIApplication.shared.refreshFeed()
+                    self.dismiss(animated: true)
+                }
+                
+            }
         }
     }
     @objc internal func handlePostButtonAndScanAI(_ button: UIButton)
@@ -2103,7 +2507,7 @@ extension CameraViewController: NextLevelVideoDelegate, PhotoEditorDelegate {
         // called when a configuration time limit is specified
         self.endCapture()
     }
-
+    // MARK: single post image captured from camera
     // video frame photo
     func nextLevel(_ nextLevel: NextLevel, didCompletePhotoCaptureFromVideoFrame photoDict: [String: Any]?) {
         print("* DID COMPLETE PHOTO CAPTURE")
@@ -2124,36 +2528,62 @@ extension CameraViewController: NextLevelVideoDelegate, PhotoEditorDelegate {
             cameraPhotoResult?.layer.cornerRadius = (self.previewView?.layer.cornerRadius)!
             cameraPhotoResult?.clipsToBounds = true
             uploadedFromCameraRoll = false
-            hideAllPhotoComponents()
+//            hideAllPhotoComponents()
             if postType == "post" {
 //                showPhotoPostComponents()
                 // create controller for brightroom
                 // Create an image provider
-                let imageProvider = ImageProvider(image: OriginalPostImageForFiltering!) // URL, Data are also supported.
-                
-                let stack = EditingStack.init(
-                  imageProvider: imageProvider
-                )
-                
-                self._present(stack, square: false)
-                
+//                let imageProvider = ImageProvider(image: OriginalPostImageForFiltering!) // URL, Data are also supported.
+//
+//                let stack = EditingStack.init(
+//                  imageProvider: imageProvider
+//                )
+//
+//                self._present(stack, square: false)
+//                showEditImageVC
+                OriginalPostImageForFiltering = OriginalPostImageForFiltering?.nx_croppedImage(to: 1.25).withHorizontallyFlippedOrientation()
+                let vc = ZLEditImageViewController(image: OriginalPostImageForFiltering!)
+                vc.editFinishBlock = { ei, editImageModel in
+//                    completion?(ei, editImageModel)
+                    print("* GOT image!")
+                    
+                    self.cameraPhotoResult?.image = ei
+                    self.cameraPhotoResult?.contentMode = .scaleAspectFill
+                    self.view.addSubview(self.cameraPhotoResult!)
+                    self.view?.sendSubviewToBack(self.cameraPhotoResult!)
+                    self.view.addSubview(self.goBackButton!)
+                    self.view.addSubview(self.stepNameLabel!)
+                    self.hideAllPhotoComponents()
+                    self.showPostDetailOptions()
+                }
+                vc.modalPresentationStyle = .fullScreen
+                self.present(vc, animated: false, completion: nil)
             } else if postType == "story" {
-                let photoEditor = PhotoEditorViewController(nibName:"PhotoEditorViewController",bundle: Bundle(for: PhotoEditorViewController.self))
-
-                //PhotoEditorDelegate
-                photoEditor.photoEditorDelegate = self
-
-                //The image to be edited
-                photoEditor.image = OriginalPostImageForFiltering
-
-                //Optional: To hide controls - array of enum control
-                photoEditor.hiddenControls = [.crop, .share, .sticker]
-
-                //Optional: Colors for drawing and Text, If not set default values will be used
-//                photoEditor.colors = [.red,.blue,.green]
-                
-                //Present the View Controller
-                present(photoEditor, animated: false, completion: nil)
+//                let photoEditor = PhotoEditorViewController(nibName:"PhotoEditorViewController",bundle: Bundle(for: PhotoEditorViewController.self))
+//
+//                //PhotoEditorDelegate
+//                photoEditor.photoEditorDelegate = self
+//
+//                //The image to be edited
+//                photoEditor.image = OriginalPostImageForFiltering
+//
+//                //Optional: To hide controls - array of enum control
+//                photoEditor.hiddenControls = [.crop, .share, .sticker]
+//
+//                //Optional: Colors for drawing and Text, If not set default values will be used
+////                photoEditor.colors = [.red,.blue,.green]
+//
+//                //Present the View Controller
+//                present(photoEditor, animated: false, completion: nil)
+                let vc = ZLEditImageViewController(image: OriginalPostImageForFiltering!)
+                vc.editFinishBlock = { ei, editImageModel in
+//                    completion?(ei, editImageModel)
+                    print("* GOT image!")
+                    self.hideAllPhotoComponents()
+                    self.doneEditing(image: ei)
+                }
+                vc.modalPresentationStyle = .fullScreen
+                self.present(vc, animated: false, completion: nil)
             }
             
         }

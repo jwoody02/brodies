@@ -20,6 +20,9 @@ import ViewAnimator
 import DGElasticPullToRefresh
 import GoogleMobileAds
 import Zoomy
+import Alamofire
+import SwiftUI
+import Presentr
 
 class imagePost {
     var username = ""
@@ -45,6 +48,8 @@ class imagePost {
     var usernameToShow: String = ""
     var storageRefForThumbnailImage = ""
     var contentNature = 0 // 0 for image, 1 for video?
+    var shouldShowFullText = false
+    var multiImageUrls: [String] = []
 }
 struct storyPost {
     var username = ""
@@ -183,6 +188,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         if indexPath.row == 0 {
             let cell = tableView.dequeueReusableCell(withIdentifier: "storyHolderCell", for: indexPath) as! StoriesTableViewCell
             cell.storiesCollectionView.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: (UIScreen.main.bounds.width / 3.5) * 1.777)
+            cell.selectionStyle = .none
             print("* set collectionviewframe: \(cell.storiesCollectionView.frame)")
             return cell
         } else if let post = imagePosts?[indexPath.row-1] as? imagePost {
@@ -198,7 +204,8 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
             cell.contentView.layer.borderColor = UIColor.lightGray.withAlphaComponent(0.2).cgColor
             cell.contentView.layer.borderWidth = 1
             
-            
+//            post.username = "JK Rowly"
+//            post.likesCount = 79
             cell.actualPost = post
             if post.location == "" {
                 cell.styleCell(type: "imagePost", hasSubTitle: false)
@@ -210,15 +217,15 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                 cell.firstusernameButton.setTitle(post.username, for: .normal)
                 cell.secondusernameButton.setTitle(post.username, for: .normal)
             }
-            cell.firstusernameButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-            cell.secondusernameButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
+            cell.firstusernameButton.titleLabel?.font = UIFont(name: "\(Constants.globalFontBold)", size: 12)
+            cell.secondusernameButton.titleLabel?.font = UIFont(name: "\(Constants.globalFontBold)", size: 12)
             //        cell.viewCommentsButton.titleLabel?.font = UIFont(name: "\(Constants.globalFont)", size: 14)
             cell.currentUserUsername = self.currentUserUsername
             cell.currentUserProfilePic = self.currentUserProfilePic
             
             cell.timeSincePostedLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
             let timeSince = Date(timeIntervalSince1970: TimeInterval(post.createdAt ?? 0)).timeAgoDisplay()
-            cell.timeSincePostedLabel.text = "\(post.username ?? "")    • \(timeSince)"
+            cell.timeSincePostedLabel.text = "\(post.username ?? "")    ∙  \(timeSince)"
             cell.firstusernameButton.sizeToFit()
             cell.firstusernameButton.frame = CGRect(x: cell.firstusernameButton.frame.minX, y: cell.firstusernameButton.frame.minY, width: cell.firstusernameButton.frame.width, height: 14)
             
@@ -253,15 +260,32 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
             
             let hashedImage = UIImage(blurHash: hash, size: CGSize(width: 32, height: 32))
             cell.imageHash = hash
-            cell.setPostImage(fromUrl: post.imageUrl)
+            if post.multiImageUrls.count > 1 {
+                cell.mainPostImage.alpha = 0
+                cell.slideshow.alpha = 1
+                cell.setupSlideshow()
+                cell.slideshow.isUserInteractionEnabled = true
+                cell.mainPostImage.isUserInteractionEnabled = false
+                cell.IGpagecontrol.alpha = 1
+            } else {
+                cell.setPostImage(fromUrl: post.imageUrl)
+                cell.mainPostImage.alpha = 1
+                cell.slideshow.alpha = 0
+                cell.mainPostImage.isUserInteractionEnabled = true
+                cell.slideshow.isUserInteractionEnabled = false
+                cell.IGpagecontrol.alpha = 0
+                addZoombehavior(for: cell.mainPostImage, settings: .instaZoomSettings)
+            }
+            
             UIView.performWithoutAnimation {
                 cell.locationButton.setTitle(post.location, for: .normal)
             }
             cell.postid = post.postID
             cell.userID = post.userID
             cell.secondusernameButton.sizeToFit()
-            cell.secondusernameButton.frame = CGRect(x: cell.secondusernameButton.frame.minX, y: cell.secondusernameButton.frame.minY, width: cell.secondusernameButton.frame.width, height: 14)
             
+            cell.secondusernameButton.frame = CGRect(x: cell.secondusernameButton.frame.minX, y: cell.secondusernameButton.frame.minY, width: cell.secondusernameButton.frame.width, height: 12)
+            cell.profilePicImage.cornerRadius = 8
             if ((post.hasValidStory) != nil) && post.hasValidStory == true {
                 print("* valid story [post]")
                 cell.profilePicImage.isUserInteractionEnabled = true
@@ -270,6 +294,8 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                 print("* no valid story [postt]")
                 cell.profilePicImage.condition = .init(display: .none, color: .none)
             }
+            cell.profilePicImage.configWithCR(CR: 8)
+//            cell.profilePicImage.layout
             if post.userImageUrl == "" {
                 
                 cell.profilePicImage.image = UIImage(named: "no-profile-img.jpeg")
@@ -293,7 +319,11 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                 cell.commentBubbleButton.setTitle("", for: .normal)
             }
             cell.postIndex = indexPath.row-1
-            addZoombehavior(for: cell.mainPostImage, settings: .instaZoomSettings)
+            
+            let tapAction = UITapGestureRecognizer(target: self, action: #selector(cell.didTapLabel(_:)))
+            cell.captionLabel?.isUserInteractionEnabled = true
+            cell.captionLabel?.addGestureRecognizer(tapAction)
+            
             return cell
         } else {
             // show ad every fourth post
@@ -328,11 +358,15 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         }
         
     }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if let cell = tableView.cellForRow(at: indexPath) as? FeedAdTableViewCell {
+        }
+    }
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         //        let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: "searchHeader") as? TableHeader
         let header = UILabel(frame: CGRect(x: 20, y: 5, width: 100, height: 20))
         header.text = "Stories"
-        header.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 20)
+        header.font = UIFont(name: Constants.globalFontBold, size: 20)
         return header
     }
     func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
@@ -380,8 +414,12 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
     @IBOutlet weak var numNewLikesLabel: UILabel!
     @IBOutlet weak var commentImage: UIImageView!
     @IBOutlet weak var numNewCommentsLabel: UILabel!
+    @IBOutlet weak var atImage: UIImageView!
+    @IBOutlet weak var newMentionLabel: UILabel!
     @IBOutlet weak var personImage: UIImageView!
     @IBOutlet weak var numNewFollowsLabel: UILabel!
+    
+    @IBOutlet weak var comingSoonLabel: UILabel!
     
     var imagePosts: [AnyObject]? = []
     
@@ -398,7 +436,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
     var currentUserProfilePic = ""
     
     var followingUIDs: [String] = [""]
-    
+    let presenter = Presentr(presentationType: .alert)
     var query: Query!
     var documents = [QueryDocumentSnapshot]()
     // ==================================================== //
@@ -406,7 +444,13 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
     // ==================================================== //
     override func viewDidLoad() {
         super.viewDidLoad()
+//        var appDataz = AppData()
+//        SwiftUI.ContentView().environmentObject(appDataz)
         
+        reloadEverything()
+    }
+    func reloadEverything() {
+        imagePosts?.removeAll()
         self.view.backgroundColor = hexStringToUIColor(hex: Constants.backgroundColor)
         MessagesButton.setTitle("", for: .normal)
         addPostButton.setTitle("", for: .normal)
@@ -427,10 +471,21 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         let brodieY = 40
         brodiesBanner.frame = CGRect(x: 0, y: brodieY, width: 80, height: Int(self.topWhiteView.frame.height) - brodieY - 5)
         brodiesBanner.center.x = self.topWhiteView.center.x
-        //        MessagesButton.addBaseShadow()
-        //        MessagesButton.layer.cornerRadius = Constants.borderRadius
+        
         MessagesButton.frame = CGRect(x: UIScreen.main.bounds.width - 40 - 20, y: 45, width: 47, height: 35)
+//        MessagesButton.frame = CGRect(x: UIScreen.main.bounds.width - 40 - 20, y: 35, width: 47, height: 35)
         MessagesButton.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
+        comingSoonLabel.backgroundColor = Constants.secondaryColor.hexToUiColor()
+        comingSoonLabel.text = "COMING SOON"
+        comingSoonLabel.isHidden = true
+        comingSoonLabel.textColor = Constants.primaryColor.hexToUiColor()
+        comingSoonLabel.layer.cornerRadius = 4
+        comingSoonLabel.clipsToBounds = true
+        comingSoonLabel.textAlignment = .center
+        comingSoonLabel.frame = CGRect(x: 0, y: MessagesButton.frame.maxY - 5, width: 60, height: 15)
+        comingSoonLabel.isUserInteractionEnabled = false
+        comingSoonLabel.font = UIFont(name:Constants.globalFontBold, size: 6)
+        comingSoonLabel.center.x = MessagesButton.center.x
         
         //        MessagesButton.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
         //        MessagesButton.backgroundColor = hexStringToUIColor(hex: Constants.secondaryColor)
@@ -440,7 +495,11 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         postsTableView.rowHeight = 900
         postsTableView.backgroundColor = .clear
         //        postsTableView.frame = CGRect(x: 0, y: topWhiteView.frame.maxY + 30, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height - 120)
-        postsTableView.frame = CGRect(x: 0, y: topWhiteView.frame.maxY - 10, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height - 120 - 50)
+        if UIDevice.current.hasNotch {
+            postsTableView.frame = CGRect(x: 0, y: topWhiteView.frame.maxY - 10, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height - 120 - 50)
+        } else {
+            postsTableView.frame = CGRect(x: 0, y: topWhiteView.frame.maxY - 10, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height - 120)
+        }
         postsTableView.showsVerticalScrollIndicator = false
         
         topGradientView.frame = CGRect(x: 0, y: postsTableView.frame.minY, width: UIScreen.main.bounds.width, height: 40)
@@ -455,7 +514,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         navigationController?.setNavigationBarHidden(true, animated: false)
         let backButton = UIBarButtonItem(title: "", style: .plain, target: navigationController, action: nil)
         navigationItem.leftBarButtonItem = backButton
-        GADMobileAds.sharedInstance().requestConfiguration.testDeviceIdentifiers = [ "36217ef7638df8c0785a5b7210b6660c", GADSimulatorID ]
+        GADMobileAds.sharedInstance().requestConfiguration.testDeviceIdentifiers = [ "f6d77ba55d8a347fb10ff41e2ccb1763", GADSimulatorID ]
         let options = GADMultipleAdsAdLoaderOptions()
         options.numberOfAds = 2
         
@@ -472,6 +531,8 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         
         if Auth.auth().currentUser?.uid == nil {
         } else {
+            // check for email verified or not
+            // TODO
             self.db.collection("user-locations").document(Auth.auth().currentUser!.uid).getDocument() {(currentUserResult, err4) in
                 let currentuserVals = currentUserResult?.data() as? [String: Any]
                 self.currentUserUsername = currentuserVals?["username"] as? String ?? ""
@@ -479,13 +540,14 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                 self.downloadLatestProfilePic(usingUrl: currentuserVals?["profileImageURL"] as? String ?? "")
             }
             //            getPosts()
-            let userID = Auth.auth().currentUser?.uid
+            let userID = Auth.auth().currentUser!.uid
+            print("* current uid: \(userID)")
             let followersRef = db.collection("followers")
-            query = followersRef.whereField("followers", arrayContains: userID!).whereField("last_post.createdAt", isNotEqualTo: false).order(by: "last_post.createdAt", descending: true).limit(to: 3)
+            query = followersRef.whereField("followers", arrayContains: userID).whereField("last_post.createdAt", isNotEqualTo: false).order(by: "last_post.createdAt", descending: true).limit(to: 3)
             //            print("* checking sub-followers/\()")
             //            query = db.collectionGroup("sub-followers").whereField("uid", isEqualTo: userID ?? "").limit(to: 3)
             
-            db.collection("following").document(userID!).getDocument {
+            db.collection("following").document(userID).getDocument {
                 (document, error) in
                 if let document = document, document.exists {
                     self.followingUIDs = ((document.data() as? [String: NSObject])?["following"] as? [String])!
@@ -493,6 +555,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                 }
             }
             getPosts()
+            
         }
         if Constants.isDebugEnabled {
             //            var window : UIWindow = UIApplication.shared.keyWindow!
@@ -521,12 +584,16 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
             
-            let indexPath = IndexPath(row: 0, section: 0)
-            let storyHolder = self?.postsTableView.cellForRow(at: indexPath)
-            if let storyHolder = storyHolder as? StoriesTableViewCell {
-                print("* RELOADING STORIES")
-                storyHolder.reloadAllStoryComponents()
-            }
+//            let indexPath = IndexPath(row: 0, section: 0)
+//            let storyHolder = self?.postsTableView.cellForRow(at: indexPath)
+//            if let storyHolder = storyHolder as? StoriesTableViewCell {
+//                print("* RELOADING STORIES")
+//                storyHolder.reloadAllStoryComponents()
+//            }
+            let indexPathRow:Int = 0
+            let indexPosition = IndexPath(row: indexPathRow, section: 0)
+            print("* reloading stories")
+            self?.postsTableView.reloadData()
             self?.numReloads = 0
             self?.getPosts()
         }, loadingView: loadingView)
@@ -535,7 +602,54 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         postsTableView.dg_setPullToRefreshBackgroundColor(postsTableView.backgroundColor!)
         
         getNotificationsCount()
+    }
+    func showErrorMessage(title: String, body: String) {
+        DispatchQueue.main.async {
+            
         
+        var alertController: AlertViewController = {
+            let font = UIFont(name: Constants.globalFontBold, size: 16)
+            let alertController = AlertViewController(title: title, body: body, titleFont: UIFont(name: Constants.globalFontBold, size: 14), bodyFont: UIFont(name: Constants.globalFont, size: 13), buttonFont: UIFont(name: Constants.globalFontMedium, size: 14))
+            let cancelAction = AlertAction(title: "Ok", style: .custom(textColor: self.hexStringToUIColor(hex: Constants.primaryColor))) {
+                
+            }
+            alertController.addAction(cancelAction)
+            //                        alertController.addAction(okAction)
+            return alertController
+        }()
+        self.presenter.presentationType = .alert
+        self.presenter.transitionType = nil
+        self.presenter.dismissTransitionType = nil
+        self.presenter.dismissAnimated = true
+        let animation = CoverVerticalAnimation(options: .spring(duration: 0.5,
+                                                                delay: 0,
+                                                                damping: 0.7,
+                                                                velocity: 0))
+        let coverVerticalWithSpring = TransitionType.custom(animation)
+        self.presenter.transitionType = coverVerticalWithSpring
+        self.presenter.dismissTransitionType = coverVerticalWithSpring
+        self.customPresentViewController(self.presenter, viewController: alertController, animated: true)
+        }
+    }
+    func refreshShi() {
+        self.imagePosts?.removeAll()
+        self.documents.removeAll()
+        self.hasReachedEndOfFeed = false
+        let userID = Auth.auth().currentUser?.uid
+        let followersRef = self.db.collection("followers")
+        self.query = followersRef.whereField("followers", arrayContains: userID!).whereField("last_post.createdAt", isNotEqualTo: false).order(by: "last_post.createdAt", descending: true).limit(to: 3)
+        self.postsTableView.reloadData()
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        let indexPath = IndexPath(row: 0, section: 0)
+        let storyHolder = self.postsTableView.cellForRow(at: indexPath)
+        if let storyHolder = storyHolder as? StoriesTableViewCell {
+            print("* RELOADING STORIES")
+            storyHolder.reloadAllStoryComponents()
+        }
+        self.numReloads = 0
+        self.getPosts()
     }
     @IBAction func addToStoryPressed(_ sender: Any) {
         let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -548,6 +662,26 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         var parentCollectionView = self.view.findViewController()
         parentCollectionView?.present(vc!, animated: true)
     }
+    @IBAction func messagesPressed(_ sender: Any) {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+//        let drop = Drop(
+//            title: "Coming Soon",
+//            subtitle: "Direct Messaging will be coming in a future update",
+//            icon: UIImage(systemName: "exclamationmark.triangle")?.withTintColor(.yellow),
+//            action: .init {
+//                print("Drop tapped")
+//                Drops.hideCurrent()
+//            },
+//            position: .top,
+//            duration: 5.0,
+//            accessibility: "Alert: Title, Subtitle"
+//        )
+//        Drops.show(drop)
+        let image = UIImage.init(systemName: "exclamationmark.triangle")!.withTintColor(.systemYellow, renderingMode: .alwaysOriginal)
+//        SPIndicator.present(title: "Coming Soon", message: "DMs are coming soon", preset: .custom(image))
+        showErrorMessage(title: "Coming Soon", body: "Messaging will be coming in a future update, sorry if we gave u blue balls :P")
+    }
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         if indexPath.row == 0 {
             return ((UIScreen.main.bounds.width / 3.5) * 1.7777) + 35
@@ -557,8 +691,8 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
             } else {
                 let post = imagePosts?[indexPath.row-1] as! imagePost
                 let photoHeight = UIScreen.main.bounds.width * 1.25 + 20
-                let userStuffheight = 15 + 7 + 40 + 10 + 20
-                let captionFont = UIFont(name: "\(Constants.globalFont)", size: 14)
+                let userStuffheight = 15 + 7 + 40 + 10 + 6
+                let captionFont = UIFont(name: "\(Constants.globalFont)", size: 12)
                 let captionString = "\(post.username)  \(post.caption ?? "")"
                 print("* cap string: \(captionString)")
                 let captionWidth = UIScreen.main.bounds.width - 30
@@ -572,15 +706,21 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                 } else if (expectedLabelHeight > 20) {
                     captionHeight = 40
                 }
-                
+                if post.shouldShowFullText {
+                    captionHeight = Int(expectedLabelHeight)
+                }
                 var likedByHeight = 0
                 if post.previewProfilePics.count > 0 {
                     likedByHeight = 8 + 25 + 10
                 } else {
                     likedByHeight = 10
                 }
+                
                 let commentButtonHeight = 30
-                let estimatedHeight = Int(photoHeight) + userStuffheight + captionHeight + 12 + 10 + likedByHeight + commentButtonHeight + 50
+                var estimatedHeight = Int(photoHeight) + userStuffheight + captionHeight + 12 + 10 + likedByHeight + commentButtonHeight + 50
+                if post.caption == "" {
+                    estimatedHeight -= 15
+                }
                 print("* returning total estimated height: \(estimatedHeight)")
                 return CGFloat(estimatedHeight)
                 //                return 800
@@ -678,7 +818,8 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                     let followersCount = data?["num_followers_notifications"] as? Int ?? 0
                     let numPostLikes = data?["num_likes_notifications"] as? Int ?? 0
                     let numCommentLikes = data?["num_comments_likes_notifications"] as? Int ?? 0
-                    if commentsCount == 0 && followersCount == 0 && numPostLikes == 0 && numCommentLikes == 0 {
+                    let numMentiones = data?["num_mentions_notifications"] as? Int ?? 0
+                    if commentsCount == 0 && followersCount == 0 && numPostLikes == 0 && numCommentLikes == 0 && numMentiones == 0 {
                         print("* user has no new notifications")
                     } else {
                         let redNotificationsCircle = UIView(frame: CGRect(x: 0, y: (tabBarController?.tabBar.getFrameForTabAt(index: 3)!.maxY)! - 20, width: 15, height: 15))
@@ -696,22 +837,34 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                         }
                         let heartFrame = self.tabBarController?.tabBar.getFrameForTabAt(index: 3)
                         let viewHeight = 50
-                        self.notificationsHolder.frame = CGRect(x: 0, y: Int(UIScreen.main.bounds.height) - 100 - viewHeight, width: 100, height: viewHeight)
-                        styleNotificationsFor(likesCount: numPostLikes + numCommentLikes, commentCount: commentsCount, followersCount: followersCount)
-    //                    styleNotificationsFor(likesCount: 12525626, commentCount: 230456, followersCount: 936793)
-                        self.notificationsHolder.frame = CGRect(x: 0, y: Int(UIScreen.main.bounds.height) - 100 - viewHeight, width: Int(numNewFollowsLabel.frame.maxX) + 20, height: viewHeight)
+                        if UIDevice.current.hasNotch {
+                            self.notificationsHolder.frame = CGRect(x: 0, y: Int(UIScreen.main.bounds.height) - 100 - viewHeight, width: 100, height: viewHeight)
+                        } else {
+                            self.notificationsHolder.frame = CGRect(x: 0, y: Int(UIScreen.main.bounds.height) - 70 - viewHeight, width: 100, height: viewHeight)
+                        }
+                        
+                        styleNotificationsFor(likesCount: numPostLikes + numCommentLikes, commentCount: commentsCount, followersCount: followersCount, mentionsCount: numMentiones)
+//                        styleNotificationsFor(likesCount: 1252562, commentCount: 57003, followersCount: 230000, mentionsCount: 10200)
+                        if UIDevice.current.hasNotch {
+                            self.notificationsHolder.frame = CGRect(x: 0, y: Int(UIScreen.main.bounds.height) - 100 - viewHeight, width: Int(numNewFollowsLabel.frame.maxX) + 14, height: viewHeight)
+                        } else {
+                            self.notificationsHolder.frame = CGRect(x: 0, y: Int(UIScreen.main.bounds.height) - 70 - viewHeight, width: Int(numNewFollowsLabel.frame.maxX) + 14, height: viewHeight)
+                        }
                         self.notificationsHolder.center.x = (heartFrame?.center.x)!
                         self.primaryRedNotifBar.frame = CGRect(x: 5, y: 5, width: Int(notificationsHolder.frame.width) - 10, height: viewHeight - 10 - 5)
                         self.primaryRedNotifBar.layer.cornerRadius = 8
                         primaryRedNotifBar.layer.masksToBounds = false
                         self.primaryRedNotifBar.backgroundColor = Constants.universalRed.hexToUiColor()
                         addRedShadow()
-                        triangleRedNotif.frame = CGRect(x: 0, y: primaryRedNotifBar.frame.maxY - 1, width: 20, height: 10)
+                        triangleRedNotif.frame = CGRect(x: 0, y: primaryRedNotifBar.frame.maxY - 1, width: 14, height: 10)
                         triangleRedNotif.center.x = notificationsHolder.frame.width / 2
                         setDownTriangle()
                         
                         let oldNotifFrame = self.notificationsHolder.frame
-                        let newNotif = CGRect(x: self.notificationsHolder.frame.minX, y: self.notificationsHolder.frame.minY + 110, width: self.notificationsHolder.frame.width - 20, height: self.notificationsHolder.frame.height)
+                        var newNotif = CGRect(x: self.notificationsHolder.frame.minX, y: self.notificationsHolder.frame.minY + 110, width: self.notificationsHolder.frame.width - 20, height: self.notificationsHolder.frame.height)
+                        if UIDevice.current.hasNotch == false {
+                            newNotif = CGRect(x: self.notificationsHolder.frame.minX, y: self.notificationsHolder.frame.minY + 80, width: self.notificationsHolder.frame.width - 20, height: self.notificationsHolder.frame.height)
+                        }
                         self.notificationsHolder.frame = newNotif
                         self.notificationsHolder.alpha = 1
                         self.notificationsHolder.isHidden = false
@@ -739,15 +892,17 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         }
         
     }
-    func styleNotificationsFor(likesCount: Int, commentCount: Int, followersCount: Int) {
+    func styleNotificationsFor(likesCount: Int, commentCount: Int, followersCount: Int, mentionsCount: Int) {
         let imageWidthHeight = 15
-        let padding = 10
+        let padding = 7
         let minY = ((Int(primaryRedNotifBar.frame.height) - imageWidthHeight) / 2) + 2
         if likesCount > 0 {
             heartImage.frame = CGRect(x: (Int(primaryRedNotifBar.frame.height) - imageWidthHeight) / 2, y: minY, width: imageWidthHeight, height: imageWidthHeight)
             numNewLikesLabel.text = "\(Double(likesCount).shortStringRepresentation)"
+            numNewLikesLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+            numNewLikesLabel.textAlignment = .left
             numNewLikesLabel.sizeToFit()
-            numNewLikesLabel.frame = CGRect(x: Int(heartImage.frame.maxX) + 5, y: minY, width: Int(numNewLikesLabel.frame.width), height: imageWidthHeight)
+            numNewLikesLabel.frame = CGRect(x: Int(heartImage.frame.maxX) + 3, y: minY, width: Int(numNewLikesLabel.frame.width) + 2, height: imageWidthHeight)
         } else {
             heartImage.frame = CGRect(x: 0, y: 0, width: 0, height: 0)
             numNewLikesLabel.frame = CGRect(x: 0, y: 0, width: 0, height: 0)
@@ -756,21 +911,36 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
         if commentCount > 0 {
             commentImage.frame = CGRect(x: Int(numNewLikesLabel.frame.maxX) + padding, y: minY, width: imageWidthHeight, height: imageWidthHeight)
             numNewCommentsLabel.text = "\(Double(commentCount).shortStringRepresentation)"
+            numNewCommentsLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+            numNewCommentsLabel.textAlignment = .left
             numNewCommentsLabel.sizeToFit()
-            numNewCommentsLabel.frame = CGRect(x: Int(commentImage.frame.maxX) + 5, y: minY, width: Int(numNewCommentsLabel.frame.width), height: imageWidthHeight)
+            numNewCommentsLabel.frame = CGRect(x: Int(commentImage.frame.maxX) + 3, y: minY, width: Int(numNewCommentsLabel.frame.width) + 2, height: imageWidthHeight)
         } else {
             commentImage.frame = CGRect(x: numNewLikesLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
             numNewCommentsLabel.frame = CGRect(x: numNewLikesLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
         }
+        if mentionsCount > 0 {
+            atImage.frame = CGRect(x: Int(numNewCommentsLabel.frame.maxX) + padding, y: minY, width: imageWidthHeight, height: imageWidthHeight)
+            newMentionLabel.text = "\(Double(mentionsCount).shortStringRepresentation)"
+            newMentionLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+            newMentionLabel.textAlignment = .left
+            newMentionLabel.sizeToFit()
+            newMentionLabel.frame = CGRect(x: Int(atImage.frame.maxX) + 3, y: minY, width: Int(newMentionLabel.frame.width) + 2, height: imageWidthHeight)
+        } else {
+            atImage.frame = CGRect(x: numNewCommentsLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
+            newMentionLabel.frame = CGRect(x: numNewCommentsLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
+        }
         
         if followersCount > 0 {
-            personImage.frame = CGRect(x: Int(numNewCommentsLabel.frame.maxX) + padding, y: minY, width: imageWidthHeight, height: imageWidthHeight)
+            personImage.frame = CGRect(x: Int(newMentionLabel.frame.maxX) + padding, y: minY, width: imageWidthHeight, height: imageWidthHeight)
             numNewFollowsLabel.text = "\(Double(followersCount).shortStringRepresentation)"
+            numNewFollowsLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
+            numNewFollowsLabel.textAlignment = .left
             numNewFollowsLabel.sizeToFit()
-            numNewFollowsLabel.frame = CGRect(x: Int(personImage.frame.maxX) + 5, y: minY, width: Int(numNewFollowsLabel.frame.width), height: imageWidthHeight)
+            numNewFollowsLabel.frame = CGRect(x: Int(personImage.frame.maxX) + 3, y: minY, width: Int(numNewFollowsLabel.frame.width) + 2, height: imageWidthHeight)
         } else {
-            personImage.frame = CGRect(x: numNewCommentsLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
-            numNewFollowsLabel.frame = CGRect(x: numNewCommentsLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
+            personImage.frame = CGRect(x: newMentionLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
+            numNewFollowsLabel.frame = CGRect(x: newMentionLabel.frame.maxX + 1, y: 0, width: 0, height: 0)
         }
     }
     func setDownTriangle(){
@@ -868,7 +1038,11 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
                                 post.tags = postVals?["tags"] as? [String] ?? [""]
                                 post.createdAt = postVals?["createdAt"] as? Double ?? Double(NSDate().timeIntervalSince1970)
                                 post.imageHash = postVals?["imageHash"] as? String ?? ""
-                                
+                                let images = postVals?["images"] as? [String] ?? []
+                                if images.count > 1 {
+                                    print("* multiple images detected")
+                                    post.multiImageUrls = images
+                                }
                                 let similarUIDS = self.fetchSimilarUIDs(likesUIDs: postVals?["likes"] as? [String] ?? [""])
                                 post.numOfLikeMindedLIkes = similarUIDS.count
                                 var firstThreToShow: [String] = similarUIDS
@@ -1075,7 +1249,14 @@ class FeedViewController: UIViewController, UITableViewDelegate, SkeletonTableVi
             vc.modalPresentationStyle = .fullScreen
             self.parent!.present(vc, animated: true)
         } else {
-            //            InitialGetPosts()
+            // reload stories
+            let indexPathRow:Int = 0
+            let indexPosition = IndexPath(row: indexPathRow, section: 0)
+            print("* reloading stories")
+            postsTableView.reloadRows(at: [indexPosition], with: .none)
+        }
+        VersionCheck.shared.isUpdateAvailable() { hasUpdates in
+          print("is update available: \(hasUpdates)")
         }
         //        logout()
     }
@@ -1320,5 +1501,105 @@ extension Double {
         // + 2 to have one digit after the comma, + 1 to not have any.
         // Remove the * and the number of digits argument to display all the digits after the comma.
         return "\(String(format: "%0.*g", Int(log10(abs(interval))) + 2, interval))\(units[i])"
+    }
+}
+class VersionCheck {
+  
+  public static let shared = VersionCheck()
+  
+  func isUpdateAvailable(callback: @escaping (Bool)->Void) {
+    let bundleId = Bundle.main.infoDictionary!["CFBundleIdentifier"] as! String
+      print("* checking if update available for \(bundleId)")
+    Alamofire.request("https://itunes.apple.com/lookup?bundleId=\(bundleId)").responseJSON { response in
+      if let json = response.result.value as? NSDictionary, let results = json["results"] as? NSArray, let entry = results.firstObject as? NSDictionary, let versionStore = entry["version"] as? String, let versionLocal = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+          print("* json response for ID: \(json)")
+        let arrayStore = versionStore.split(separator: ".").compactMap { Int($0) }
+        let arrayLocal = versionLocal.split(separator: ".").compactMap { Int($0) }
+
+        if arrayLocal.count != arrayStore.count {
+          callback(true) // different versioning system
+          return
+        }
+
+        // check each segment of the version
+        for (localSegment, storeSegment) in zip(arrayLocal, arrayStore) {
+          if localSegment < storeSegment {
+            callback(true)
+            return
+          }
+        }
+      }
+      callback(false) // no new version or failed to fetch app store version
+    }
+  }
+  
+}
+enum VersionError: Error {
+    case invalidBundleInfo, invalidResponse
+}
+
+class LookupResult: Decodable {
+    var results: [AppInfo]
+}
+
+class AppInfo: Decodable {
+    var version: String
+    var trackViewUrl: String
+}
+
+class AppUpdater: NSObject {
+
+    private override init() {}
+    static let shared = AppUpdater()
+
+    func showUpdate(withConfirmation: Bool) {
+        DispatchQueue.global().async {
+            self.checkVersion(force : !withConfirmation)
+        }
+    }
+
+    private  func checkVersion(force: Bool) {
+        let info = Bundle.main.infoDictionary
+        if let currentVersion = info?["CFBundleShortVersionString"] as? String {
+            _ = getAppInfo { (info, error) in
+                if let appStoreAppVersion = info?.version{
+                    if let error = error {
+                        print("error getting app store version: ", error)
+                    } else if appStoreAppVersion == currentVersion {
+                        print("Already on the last app version: ",currentVersion)
+                    } else {
+                        print("Needs update: AppStore Version: \(appStoreAppVersion) > Current version: ",currentVersion)
+                        DispatchQueue.main.async {
+                            let topController: UIViewController = UIApplication.shared.keyWindow!.rootViewController!
+//                            topController.showAppUpdateAlert(Version: (info?.version)!, Force: force, AppURL: (info?.trackViewUrl)!)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func getAppInfo(completion: @escaping (AppInfo?, Error?) -> Void) -> URLSessionDataTask? {
+        guard let identifier = Bundle.main.infoDictionary?["CFBundleIdentifier"] as? String,
+            let url = URL(string: "http://itunes.apple.com/lookup?bundleId=\(identifier)") else {
+                DispatchQueue.main.async {
+                    completion(nil, VersionError.invalidBundleInfo)
+                }
+                return nil
+        }
+        let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
+            do {
+                if let error = error { throw error }
+                guard let data = data else { throw VersionError.invalidResponse }
+                let result = try JSONDecoder().decode(LookupResult.self, from: data)
+                guard let info = result.results.first else { throw VersionError.invalidResponse }
+
+                completion(info, nil)
+            } catch {
+                completion(nil, error)
+            }
+        }
+        task.resume()
+        return task
     }
 }

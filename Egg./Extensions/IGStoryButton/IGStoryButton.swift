@@ -42,7 +42,11 @@ public protocol IGStoryButtonDelegate: AnyObject {
             }
         }
     }
-    
+    public var cornerRadius = 12 {
+        didSet {
+            configureLayout()
+        }
+    }
     /// color type of indicatorLayer
     public enum ColorType: Equatable {
         /// orange and pink
@@ -192,7 +196,7 @@ public extension IGStoryButton {
     }
 }
 
-private extension IGStoryButton {
+public extension IGStoryButton {
     /// subview configuration
     func configureView() {
         contentView = .init(frame: CGRect(x: borderWidth / 2.0, y: borderWidth / 2.0, width: frame.width - borderWidth, height: frame.height - borderWidth))
@@ -208,11 +212,21 @@ private extension IGStoryButton {
     
     /// layout configuration
     func configureLayout() {
-        layer.cornerRadius = 12
+        print("* configuring layout with corner radius: \(cornerRadius)")
+        layer.cornerRadius = CGFloat(14)
         indicatorLayer.frame = contentView.frame.insetBy(dx: -borderWidth, dy: -borderWidth)
-        indicatorLayer.cornerRadius = 14
+        indicatorLayer.cornerRadius = CGFloat(16)
         intermediateLayer.frame = contentView.frame.insetBy(dx: -borderWidth / 2.0, dy: -borderWidth / 2.0)
-        intermediateLayer.cornerRadius = 12
+        intermediateLayer.cornerRadius = CGFloat(14)
+        statusView.frame = CGRect(x: (frame.width - borderWidth) * 3.0 / 4.0, y: (frame.width - borderWidth) * 3.0 / 4.0, width: (frame.width - borderWidth) / 3.0, height: (frame.width - borderWidth) / 3.0)
+    }
+    func configWithCR(CR: Int) {
+        print("* configuring layout with corner radius: \(CR)")
+        layer.cornerRadius = CGFloat(CR)
+        indicatorLayer.frame = contentView.frame.insetBy(dx: -borderWidth, dy: -borderWidth)
+        indicatorLayer.cornerRadius = CGFloat(CR)
+        intermediateLayer.frame = contentView.frame.insetBy(dx: -borderWidth / 2.0, dy: -borderWidth / 2.0)
+        intermediateLayer.cornerRadius = CGFloat(CR + 2)
         statusView.frame = CGRect(x: (frame.width - borderWidth) * 3.0 / 4.0, y: (frame.width - borderWidth) * 3.0 / 4.0, width: (frame.width - borderWidth) / 3.0, height: (frame.width - borderWidth) / 3.0)
     }
     

@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct User {
+struct User : Codable, Equatable {
     var uid: String
     var username: String
     var profileImageUrl: String
@@ -23,5 +23,6 @@ struct User {
     var isPrivate: Bool?
     var hasRequestedFollow: Bool? // have we requested to follow if private?
     var requestApproved: Bool? // have we been approved
+    var isRecentSearch: Bool?
 }
 

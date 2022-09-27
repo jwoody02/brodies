@@ -51,7 +51,7 @@ class TableHeader: UITableViewHeaderFooterView, UITextFieldDelegate {
     
     override init(reuseIdentifier: String?) {
         super.init(reuseIdentifier: reuseIdentifier)
-        searchBar.font = UIFont(name: "\(Constants.globalFont)", size: 15)
+        searchBar.font = UIFont(name: "\(Constants.globalFont)", size: 14)
         searchBar.textColor = .darkGray
         searchBar.delegate = self
         // handle the editingChanged event by calling (textFieldDidEditingChanged(-:))
@@ -391,16 +391,8 @@ class userListViewController: UIViewController, UITableViewDelegate, UITableView
                     }
                     mainPostDispatchQueue.notify(queue: .main) {
                         print("* dispatch queue notified, refreshing")
-                        if ((querySnapshot?.documents.isEmpty) != nil) && querySnapshot?.documents.isEmpty == true {
-                        } else {
-//                            self.usersTableView.reloadData {
-//                                print("* done reloading")
-////                                self.usersTableView.fadeIn()
-//                            }
-                            self.usersTableView.reloadData()
-                            
-                            
-                        }
+                        self.searchResults.removeDuplicates()
+                        self.usersTableView.reloadData()
                     }
                 }
                 
@@ -434,12 +426,12 @@ class userListViewController: UIViewController, UITableViewDelegate, UITableView
         topWhiteView.clipsToBounds = true
         if userConfig.shouldhideBackbutton == true {
             topWhiteView.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 60)
-            topLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+            topLabel.font = UIFont(name: "\(Constants.globalFontBold)", size: 15)
             topLabel.sizeToFit()
             topLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (topLabel.frame.width / 2), y: 20, width: topLabel.frame.width, height: topLabel.frame.height)
         } else {
             topWhiteView.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 90)
-            topLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 16)
+            topLabel.font = UIFont(name: "\(Constants.globalFontBold)", size: 15)
             topLabel.sizeToFit()
             topLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (topLabel.frame.width / 2), y: 50, width: topLabel.frame.width, height: topLabel.frame.height)
         }
@@ -470,7 +462,7 @@ class userListViewController: UIViewController, UITableViewDelegate, UITableView
         magnifyingGlassImage.frame = CGRect(x: searchBar.frame.minX + 15, y: searchBar.frame.minY + 15, width: 20, height: 20)
         usersTableView.backgroundColor = .clear
 //        usersTableView.frame = CGRect(x: 10, y: searchBar.frame.maxY + 20, width: UIScreen.main.bounds.width - 20, height: UIScreen.main.bounds.height - searchBar.frame.maxY)
-        usersTableView.rowHeight = 90
+        usersTableView.rowHeight = 80
         usersTableView.separatorStyle = .none
         
         
@@ -482,19 +474,20 @@ class userListViewController: UIViewController, UITableViewDelegate, UITableView
     @objc func textFieldDidEditingChanged(_ textField: UITextField) {
         
         // if a timer is already active, prevent it from firing
-        if searchTimer != nil {
-            searchTimer?.invalidate()
-            searchTimer = nil
-        }
-        
-        // reschedule the search: in 1.0 second, call the searchForKeyword method on the new textfield content
-        searchTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(searchForKeyword(_:)), userInfo: textField.text!, repeats: false)
+//        if searchTimer != nil {
+//            searchTimer?.invalidate()
+//            searchTimer = nil
+//        }
+//
+//        // reschedule the search: in 1.0 second, call the searchForKeyword method on the new textfield content
+//        searchTimer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(searchForKeyword(_:)), userInfo: textField.text!, repeats: false)
+        self.search(keyword: textField.text ?? "")
     }
     
     @objc func searchForKeyword(_ timer: Timer) {
         
         // retrieve the keyword from user info
-        let keyword = timer.userInfo!
+//        let keyword = timer.userInfo!
     }
     func resetTableView() {
         hasDoneinitialFetch = false
@@ -531,7 +524,7 @@ class userListViewController: UIViewController, UITableViewDelegate, UITableView
         cell.result = res
         cell.titleLabel.text = res.fullname
         cell.subTitleLabel.text = res.username
-        cell.locationLabel.text = res.location ?? "No location"
+//        cell.locationLabel.text = res.location ?? "No location"
         cell.selectionStyle = .none
         if res.hasValidStory {
             print("* valid story")
@@ -636,12 +629,15 @@ class userListCell: UITableViewCell {
     @IBOutlet weak var subTitleLabel: UILabel!
     @IBOutlet weak var arrButton: UIButton!
     
-    @IBOutlet weak var locationLabel: UILabel!
-    @IBOutlet weak var locationImage: UIImageView!
+//    @IBOutlet weak var locationLabel: UILabel!
+//    @IBOutlet weak var locationImage: UIImageView!
+    @IBOutlet weak var isFollowingLabel: UILabel!
     
     @IBOutlet weak var followButton: UIButton!
     
     @IBOutlet weak var unblockButton: UIButton!
+    
+    @IBOutlet weak var brodieBanner: UIImageView!
     
     var parentViewController: userListViewController?
     var index = 0
@@ -651,17 +647,28 @@ class userListCell: UITableViewCell {
     func styleCell() {
         profilePicButton.setTitle("", for: .normal)
         
+        let profXY = Int(12)
+        let profWid = Int(Int(self.contentView.frame.height) - (profXY*2))
         
-        let profWid = Int(self.contentView.frame.height - 32)
-        let profXY = Int(16)
         profilePicButton.frame = CGRect(x: profXY, y: profXY, width: profWid, height: profWid)
         profilePicButton.layer.cornerRadius = 12
-        titleLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
-        subTitleLabel.font = UIFont(name: "\(Constants.globalFont)", size: 13)
+        titleLabel.font = UIFont(name: "\(Constants.globalFontBold)", size: 12)
+        subTitleLabel.font = UIFont(name: "\(Constants.globalFont)", size: 12)
         
         let titleWidths = Int(Int(self.contentView.frame.width) - profXY - profWid - 10 - 30)
-        titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 17, width: titleWidths, height: 16)
-        subTitleLabel.frame = CGRect(x: titleLabel.frame.minX + 2, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+//        titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 17, width: titleWidths, height: 16)
+//        subTitleLabel.frame = CGRect(x: titleLabel.frame.minX + 2, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+//        if result.isFollowing == true {
+//            titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 12, width: titleWidths, height: 16)
+//            subTitleLabel.frame = CGRect(x: titleLabel.frame.minX, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+//            isFollowingLabel.isHidden = false
+//            isFollowingLabel.frame = CGRect(x: subTitleLabel.frame.minX, y: subTitleLabel.frame.maxY + 2, width: CGFloat(titleWidths), height: 15)
+//        } else {
+//
+//        }
+        titleLabel.frame = CGRect(x: Int(profXY + profWid + 10), y: 18, width: titleWidths, height: 16)
+        subTitleLabel.frame = CGRect(x: titleLabel.frame.minX, y: titleLabel.frame.maxY, width: CGFloat(titleWidths), height: 15)
+        isFollowingLabel.isHidden = true
         self.backgroundColor = .clear
         self.contentView.backgroundColor = .white
         self.contentView.layer.cornerRadius = 12
@@ -684,11 +691,13 @@ class userListCell: UITableViewCell {
         arrButton.frame = CGRect(x: Int(self.contentView.frame.width) - arrWit - 15, y: 26, width: arrWit, height: arrWit)
         arrButton.backgroundColor = hexStringToUIColor(hex: "#f0f0f5")
         
-        locationImage.frame = CGRect(x: titleLabel.frame.minX-1, y: subTitleLabel.frame.maxY+3, width: 10, height: 10)
-        locationImage.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
-        locationLabel.frame = CGRect(x: locationImage.frame.maxX + 3, y: locationImage.frame.minY - 2, width: self.contentView.frame.width - CGFloat(profWid) - 30, height: 14)
-        locationLabel.textColor = hexStringToUIColor(hex: Constants.primaryColor)
-        locationLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+//        locationImage.frame = CGRect(x: titleLabel.frame.minX-1, y: subTitleLabel.frame.maxY+3, width: 10, height: 10)
+//        locationImage.tintColor = hexStringToUIColor(hex: Constants.primaryColor)
+//        locationLabel.frame = CGRect(x: locationImage.frame.maxX + 3, y: locationImage.frame.minY - 2, width: self.contentView.frame.width - CGFloat(profWid) - 30, height: 14)
+//        locationLabel.textColor = hexStringToUIColor(hex: Constants.primaryColor)
+//        locationLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 10)
+//        locationImage.isHidden = true
+//        locationLabel.isHidden = true
         if result.profileImageUrl == "" {
             profilePicButton.image = UIImage(named: "no-profile-img.jpeg")
         } else {
@@ -703,8 +712,9 @@ class userListCell: UITableViewCell {
             print("* styling for not following")
             styleForNotFollowing()
         }
-        let followbuttonwidth = 100
+        let followbuttonwidth = 80
         followButton.frame = CGRect(x: Int(self.contentView.frame.width) - followbuttonwidth - 20, y: Int(22.5), width: followbuttonwidth, height: 35)
+        followButton.center.y = self.contentView.frame.height / 2
         if result.uid == Auth.auth().currentUser?.uid || isUnblockView == true {
             followButton.isHidden = true
         }
@@ -716,6 +726,27 @@ class userListCell: UITableViewCell {
             self.unblockButton.tintColor = .black
             self.unblockButton.clipsToBounds = true
             self.unblockButton.layer.cornerRadius = 12
+        }
+        if result.uid == "1drvriZljTSCXM7qSFyJHCLqENE2" {
+            print("* brodieeee")
+            titleLabel.isHidden = true
+            subTitleLabel.isHidden = false
+            brodieBanner.isHidden = false
+            brodieBanner.frame = CGRect(x: Int(profXY + profWid + 10), y: 18, width: 60, height: 22)
+            subTitleLabel.frame = CGRect(x: titleLabel.frame.minX, y: brodieBanner.frame.maxY, width: CGFloat(titleWidths), height: 15)
+            isFollowingLabel.isHidden = true
+            subTitleLabel.text = "@brodie"
+            followButton.isHidden = true
+        } else {
+            if result.uid == Auth.auth().currentUser?.uid {
+                followButton.isHidden = true
+            } else {
+                followButton.isHidden = false
+            }
+            titleLabel.isHidden = false
+            subTitleLabel.isHidden = false
+            brodieBanner.isHidden = true
+            
         }
 //        self.followButton.center.y = self.contentView.frame.center.y
 //        self.followButton.fadeIn()
@@ -757,6 +788,7 @@ class userListCell: UITableViewCell {
                         } else {
                             print("succesfully followed user!")
                             self.parentViewController?.searchResults[self.index].isFollowing = true
+                            self.result.isFollowing = true
                         }
                     }
                 }
@@ -771,24 +803,25 @@ class userListCell: UITableViewCell {
                 } else {
                     print("succesfully unfollowed user!")
                     self.parentViewController?.searchResults[self.index].isFollowing = false
+                    self.result.isFollowing = false
                 }
             }
         }
     }
     func styleForFollowing() {
-        self.followButton.setTitle("Following", for: .normal)
+        self.followButton.setTitle("Unfollow", for: .normal)
         self.followButton.backgroundColor = self.hexStringToUIColor(hex: "#ececec")
         self.followButton.tintColor = .black
         self.followButton.clipsToBounds = true
         self.followButton.layer.cornerRadius = 8
-        self.followButton.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-        self.followButton.titleLabel?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-        self.followButton.setImage(UIImage(systemName: "chevron.down")?.applyingSymbolConfiguration(.init(pointSize: 8, weight: .semibold, scale: .medium))?.image(withTintColor: .black), for: .normal)
-        self.followButton.imageView?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-        let spacing = CGFloat(-10); // the amount of spacing to appear between image and title
-        followButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: spacing, bottom: -2, right: 0)
-        
-        followButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: spacing)
+//        self.followButton.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+//        self.followButton.titleLabel?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+//        self.followButton.setImage(UIImage(systemName: "chevron.down")?.applyingSymbolConfiguration(.init(pointSize: 8, weight: .semibold, scale: .medium))?.image(withTintColor: .black), for: .normal)
+//        self.followButton.imageView?.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+//        let spacing = CGFloat(-10); // the amount of spacing to appear between image and title
+//        followButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: spacing, bottom: -2, right: 0)
+//
+//        followButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: spacing)
     }
     func styleForNotFollowing() {
         self.followButton.setTitle("Follow", for: .normal)

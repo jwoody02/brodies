@@ -115,7 +115,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
         if let settingsLabel = self.settingsLabel {
             settingsLabel.text = "Settings"
             settingsLabel.frame = CGRect(x: 0, y: 20, width: UIScreen.main.bounds.width, height: 25)
-            settingsLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 18)
+//            settingsLabel.font = UIFont(name: "HelveticaNeue-Bold", size: 18)
+            settingsLabel.font = UIFont(name: Constants.globalFontBold, size: 16)
             settingsLabel.textColor = .darkGray
             settingsLabel.textAlignment = .center
             self.view.addSubview(settingsLabel)
@@ -143,7 +144,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 profileLabel.text = "Profile"
                 profileLabel.isUserInteractionEnabled = false
                 profileLabel.textColor = Constants.textColor.hexToUiColor()
-                profileLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//                profileLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
+                profileLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.profileButton?.addSubview(profileLabel)
             }
             self.profileArrow = UIImageView(frame: CGRect(x: profileButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -180,7 +182,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 blockedAccountsLabel.text = "Blocked Accounts"
                 blockedAccountsLabel.isUserInteractionEnabled = false
                 blockedAccountsLabel.textColor = Constants.textColor.hexToUiColor()
-                blockedAccountsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//                blockedAccountsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
+                blockedAccountsLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.blockedAccountsButton?.addSubview(blockedAccountsLabel)
             }
             self.blockedAccountsArrow = UIImageView(frame: CGRect(x: blockedAccountsButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -215,7 +218,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 savedLabel.text = "Saved Posts"
                 savedLabel.isUserInteractionEnabled = false
                 savedLabel.textColor = Constants.textColor.hexToUiColor()
-                savedLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//                savedLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
+                savedLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.savedButton?.addSubview(savedLabel)
             }
             self.savedArrow = UIImageView(frame: CGRect(x: savedButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -251,7 +255,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 notificationsLabel.text = "Notifications"
                 notificationsLabel.isUserInteractionEnabled = false
                 notificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                notificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//                notificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
+                notificationsLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.notificationsButton?.addSubview(notificationsLabel)
             }
             self.notificationsArrow = UIImageView(frame: CGRect(x: notificationsButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -286,7 +291,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 privacyPolicyLabel.text = "Privacy Policy"
                 privacyPolicyLabel.isUserInteractionEnabled = false
                 privacyPolicyLabel.textColor = Constants.textColor.hexToUiColor()
-                privacyPolicyLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//                privacyPolicyLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
+                privacyPolicyLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.privacyPolicyButton?.addSubview(privacyPolicyLabel)
             }
             self.privacyPolicyArrow = UIImageView(frame: CGRect(x: privacyPolicyButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -322,7 +328,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 termsLabel.text = "Terms of Service"
                 termsLabel.isUserInteractionEnabled = false
                 termsLabel.textColor = Constants.textColor.hexToUiColor()
-                termsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//                termsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
+                termsLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.termsButton?.addSubview(termsLabel)
             }
             self.termsArrow = UIImageView(frame: CGRect(x: termsButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -357,7 +364,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 communityLabel.text = "Community Guidelines"
                 communityLabel.isUserInteractionEnabled = false
                 communityLabel.textColor = Constants.textColor.hexToUiColor()
-                communityLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+//                communityLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
+                communityLabel.font = UIFont(name: Constants.globalFontMedium, size: 13)
                 self.communityButton?.addSubview(communityLabel)
             }
             self.communityArrow = UIImageView(frame: CGRect(x: communityButton.frame.width - 32 - 10, y: 0, width: 32, height: 32))
@@ -393,7 +401,8 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 logoutLabel.text = "Log out"
                 logoutLabel.isUserInteractionEnabled = false
                 logoutLabel.textColor = Constants.universalRed.hexToUiColor()
-                logoutLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+//                logoutLabel.font = UIFont(name: "HelveticaNeue-Bold", size: 14)
+                logoutLabel.font = UIFont(name: Constants.globalFontBold, size: 13)
                 self.logoutButton?.addSubview(logoutLabel)
             }
             self.view.addSubview(logoutButton)
@@ -413,7 +422,7 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 allNotificationsLabel.text = "All Notifications"
                 allNotificationsLabel.isUserInteractionEnabled = false
                 allNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                allNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                allNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                 self.allNotificationsView?.addSubview(allNotificationsLabel)
             }
             let checkboxWid = 20
@@ -449,7 +458,7 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                     likesNotificationsLabel.text = "Likes"
                     likesNotificationsLabel.isUserInteractionEnabled = false
                     likesNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    likesNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    likesNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.likesNotificationsView?.addSubview(likesNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -474,7 +483,7 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                     commentsNotificationsLabel.text = "Comments"
                     commentsNotificationsLabel.isUserInteractionEnabled = false
                     commentsNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    commentsNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    commentsNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.commentsNotificationsView?.addSubview(commentsNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -499,7 +508,7 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                     followersNotificationsLabel.text = "New Followers"
                     followersNotificationsLabel.isUserInteractionEnabled = false
                     followersNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    followersNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    followersNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.followersNotificationsView?.addSubview(followersNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -524,7 +533,7 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                     mentionsNotificationsLabel.text = "Mentions"
                     mentionsNotificationsLabel.isUserInteractionEnabled = false
                     mentionsNotificationsLabel.textColor = Constants.textColor.hexToUiColor()
-                    mentionsNotificationsLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                    mentionsNotificationsLabel.font = UIFont(name: "HelveticaNeue-Medium", size: 14)
                     self.mentionsNotificationsView?.addSubview(mentionsNotificationsLabel)
                 }
                 let checkboxWid = 20
@@ -686,7 +695,7 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                 print("* prompting for logout?")
                 var alertController: AlertViewController = {
                     let font = UIFont(name: "CourierNewPSMT", size: 16)
-                    let alertController = AlertViewController(title: "Confirmation", body: "Are you sure you want to log out?", titleFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14), bodyFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14), buttonFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14))
+                    let alertController = AlertViewController(title: "Confirmation", body: "Are you sure you want to log out?", titleFont: UIFont(name: "HelveticaNeue-Bold", size: 14), bodyFont: UIFont(name: "HelveticaNeue-Bold", size: 14), buttonFont: UIFont(name: "HelveticaNeue-Bold", size: 14))
                     let cancelAction = AlertAction(title: "Nah", style: .custom(textColor: UIColor.darkGray)) {
                         
                     }
@@ -696,7 +705,7 @@ class SettingsPopupController: UIViewController, UITextViewDelegate {
                         let storyboard = UIStoryboard(name: "Main", bundle: nil)
                         let vc = storyboard.instantiateViewController(withIdentifier: "LoginViewController")
                         vc.modalPresentationStyle = .fullScreen
-                        self.present(vc, animated: true)
+                        self.parent!.present(vc, animated: true)
                     }
                     alertController.addAction(cancelAction)
                                             alertController.addAction(logoutAction)

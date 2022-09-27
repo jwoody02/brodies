@@ -11,6 +11,7 @@ import Presentr
 import FirebaseFirestore
 import FirebaseAuth
 import SPAlert
+import FirebaseDynamicLinks
 
 class ThreeDotsOnProfileController: UIViewController {
     let backgroundColor = Constants.backgroundColor.hexToUiColor()
@@ -34,6 +35,10 @@ class ThreeDotsOnProfileController: UIViewController {
     var profileUID = ""
     var isBlocked = false
     var profileUserName = ""
+    public var currentUsername = ""
+    public var currentProfilePic = ""
+    
+    
     var presenter = Presentr(presentationType: .alert)
     var parentVC = MyProfileViewController()
     
@@ -51,6 +56,7 @@ class ThreeDotsOnProfileController: UIViewController {
             shareBigButton.clipsToBounds = true
             shareBigButton.addReportShadow()
             shareBigButton.backgroundColor = buttonBackgrounds
+            shareBigButton.addTarget(self, action: #selector(shareLinkPressed(_:)), for: .touchUpInside)
             shareBigButton.frame = CGRect(x: 15, y: 15, width: bigThreeButtonWidths, height: 70)
             self.shareIcon = UIImageView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
             if let shareIcon = self.shareIcon {
@@ -173,7 +179,7 @@ class ThreeDotsOnProfileController: UIViewController {
             }
         } else {
             var alertController: AlertViewController = {
-                let alertController = AlertViewController(title: "Confirmation", body: "Are you sure you wanna block @\(self.profileUserName)? If ya'll make up, you can always unblock from settings so no pressure.", titleFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14), bodyFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14), buttonFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14))
+                let alertController = AlertViewController(title: "Confirmation", body: "Are you sure you wanna block @\(self.profileUserName)? If ya'll make up, you can always unblock from settings so no pressure.", titleFont: UIFont(name: Constants.globalFontBold, size: 13), bodyFont: UIFont(name: Constants.globalFontBold, size: 13), buttonFont: UIFont(name: Constants.globalFontBold, size: 13))
                 let cancelAction = AlertAction(title: "Cancel", style: .custom(textColor: .darkGray)) {
                     
                 }
@@ -229,6 +235,9 @@ class ThreeDotsOnProfileController: UIViewController {
         
         
     }
+    @objc internal func shareLinkPressed(_ button: UIButton) {
+        saveShareLinkToClipboard()
+    }
     @objc internal func ReportButtonPressed(_ button: UIButton) {
         print("* report button pressed")
         let vc = ReportPostsController()
@@ -236,6 +245,45 @@ class ThreeDotsOnProfileController: UIViewController {
         vc.isPostReport = false
         self.presentPanModal(vc)
         
+    }
+    func saveShareLinkToClipboard() {
+        guard let link = URL(string: "https://www.brodies.app") else { return }
+        let dynamicLinksDomainURIPrefix = "https://brodies.page.link/open-profile?uid=\(self.profileUID)"
+        let linkBuilder = DynamicLinkComponents(link: link, domainURIPrefix: dynamicLinksDomainURIPrefix)
+
+        linkBuilder?.iOSParameters = DynamicLinkIOSParameters(bundleID: "com.caliwood.eggtopia")
+        linkBuilder?.iOSParameters?.appStoreID = "1637329972"
+//        linkBuilder?.iOSParameters?.minimumAppVersion = "1.2.3"
+
+        linkBuilder?.analyticsParameters = DynamicLinkGoogleAnalyticsParameters(source: "inapp",
+                                                                               medium: "social",
+                                                                               campaign: "share-link-generated")
+
+        linkBuilder?.socialMetaTagParameters = DynamicLinkSocialMetaTagParameters()
+        linkBuilder?.socialMetaTagParameters?.title = "\(self.currentUsername)"
+        linkBuilder?.socialMetaTagParameters?.descriptionText = "To see posts by \(self.currentUsername), download Brodie's from the app store."
+        linkBuilder?.socialMetaTagParameters?.imageURL = URL(string: "\(self.currentProfilePic)")
+
+        guard let longDynamicLink = linkBuilder?.url else { return }
+        print("The long URL is: \(longDynamicLink)")
+        DynamicLinkComponents.shortenURL(longDynamicLink, options: nil) { url, warnings, error in
+            guard let url = url, error != nil else { self.openPageForLink(url: longDynamicLink.absoluteString); return }
+          print("The short URL is: \(url)")
+//            UIPasteboard.general.string = url.absoluteString
+//            SPAlert.present(title: "Link saved to clipboard!", preset: .done, haptic: .success)
+//            return url.absoluteString
+            self.openPageForLink(url: url.absoluteString)
+        }
+//        return longDynamicLink.absoluteString
+    }
+    func openPageForLink(url: String) {
+        if let link = NSURL(string: url)
+                {
+            let objectsToShare = [link, "follow @\(self.currentUsername) on Brodie's"] as [Any]
+                    let activityVC = UIActivityViewController(activityItems: objectsToShare, applicationActivities: nil)
+//                    activityVC.excludedActivityTypes = [UIActivityTypeAirDrop, UIActivityTypeAddToReadingList]
+            self.present(activityVC, animated: true, completion: nil)
+                }
     }
 }
 

@@ -13,8 +13,8 @@ import GoogleSignIn
 import FirebaseMessaging
 import GoogleMobileAds
 import IQKeyboardManager
-
-
+import FirebaseAppCheck
+import FirebaseDynamicLinks
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
     
@@ -43,7 +43,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
             
             application.registerForRemoteNotifications()
         }
-        application.applicationIconBadgeNumber = 0
+        
         IQKeyboardManager.shared().isEnabled = true
         IQKeyboardManager.shared().toolbarTintColor = Constants.primaryColor.hexToUiColor()
         Messaging.messaging().delegate = self
@@ -102,12 +102,70 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
         // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
         // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
-    @available(iOS 9.0, *)
-    func application(_ application: UIApplication, open url: URL,
-                     options: [UIApplication.OpenURLOptionsKey: Any]) -> Bool {
-        return GIDSignIn.sharedInstance.handle(url)
+//    @available(iOS 9.0, *)
+//    func application(_ application: UIApplication, open url: URL,
+//                     options: [UIApplication.OpenURLOptionsKey: Any]) -> Bool {
+//        return GIDSignIn.sharedInstance.handle(url)
+//    }
+    func handleIncomingDynamicLink(_ dynamicLink: DynamicLink) {
+        guard let url = dynamicLink.url else {
+            print("* looks like dynamic link object has no url?")
+            return
+        }
+        print("* incomning link parameter: \(url.absoluteString)")
     }
-    
+    func application(_ application: UIApplication,
+                                  continue userActivity: NSUserActivity,
+                                  restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        print("* useractivity caught")
+        if let incomingURL = userActivity.webpageURL {
+            print("* incoming URL is \(incomingURL)")
+            let linkHandled = DynamicLinks.dynamicLinks().handleUniversalLink(incomingURL) { (dynamicLink, error) in
+                guard error == nil else {
+                    print("* found error with link: \(error!.localizedDescription)")
+                    return
+                }
+                if let dynamicLink = dynamicLink {
+                    print("* valid dynamic link, handling")
+                    self.handleIncomingDynamicLink(dynamicLink)
+                }
+            }
+            if linkHandled {
+                return true
+            } else {
+                return false
+            }
+        }
+        return false
+    }
+    @available(iOS 9.0, *)
+    func application(_ app: UIApplication, open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey: Any]) -> Bool {
+        print("* application received url: \(url.absoluteString)")
+        if url.absoluteString.contains("page.link") {
+            
+            return application(app, open: url,
+                               sourceApplication: options[UIApplication.OpenURLOptionsKey
+                                 .sourceApplication] as? String,
+                               annotation: "")
+        } else {
+            return GIDSignIn.sharedInstance.handle(url)
+        }
+      
+    }
+
+    func application(_ application: UIApplication, open url: URL, sourceApplication: String?,
+                     annotation: Any) -> Bool {
+      if let dynamicLink = DynamicLinks.dynamicLinks().dynamicLink(fromCustomSchemeURL: url) {
+        // Handle the deep link. For example, show the deep-linked content or
+        // apply a promotional offer to the user's account.
+        // ...
+          print("* got dynamic link: \(dynamicLink)")
+        return true
+      }
+        print("* failed to get dynamic link")
+      return false
+    }
 }
 @available(iOS 10, *)
 extension AppDelegate: UNUserNotificationCenterDelegate {
@@ -126,9 +184,16 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         // Print full message.
         print("* WILL PRESENT NOTIFICATION:")
         print(userInfo)
+        let state = UIApplication.shared.applicationState
+        if state == .background || state == .inactive {
+            // background
+            UIApplication.shared.applicationIconBadgeNumber += 1
+            completionHandler([[.alert, .sound]])
+        } else if state == .active {
+            // foreground -- show some sort of alert?
+//            completionHandler(nil)
+        }
         
-        // Change this to your preferred presentation option
-        completionHandler([[.alert, .sound]])
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter,
@@ -144,7 +209,15 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         // Print full message.
         print("* DID RECEIVE NOTIFICATION:")
         print(userInfo)
-        UIApplication.shared.applicationIconBadgeNumber += 1
+        let state = UIApplication.shared.applicationState
+        if state == .background || state == .inactive {
+            // background
+            UIApplication.shared.applicationIconBadgeNumber += 1
+        } else if state == .active {
+            // foreground -- show some sort of alert?
+        }
+
+        
         completionHandler()
     }
 }
@@ -168,4 +241,18 @@ extension UNNotificationAttachment {
         
         return nil
     }
+}
+extension UIApplication {
+    func refreshFeed() {
+        if let window = UIApplication.shared.windows.first {
+            if let tabBarController = window.rootViewController as? UITabBarController {
+                if let feedVC = tabBarController.viewControllers?[0] as? FeedViewController {
+                    print("* refreshing feed remotely")
+                    feedVC.refreshShi()
+                }
+            }
+        }
+        
+    }
+    
 }

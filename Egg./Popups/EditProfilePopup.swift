@@ -17,12 +17,13 @@ import Kingfisher
 import MaterialComponents
 import SPAlert
 import FirebaseStorage
+import TransitionButton
 
 class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     @IBOutlet weak var topWhiteView: UIView!
     @IBOutlet weak var backButton: UIButton!
     @IBOutlet weak var bottomWhiteView: UIView!
-    @IBOutlet weak var saveButton: UIButton!
+    @IBOutlet weak var saveButton: TransitionButton!
     @IBOutlet weak var topLabel: UILabel!
     
     @IBOutlet weak var scrollView: UIScrollView!
@@ -218,7 +219,7 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
         self.bottomWhiteView.layer.shadowRadius = Constants.borderRadius
         
         
-        topLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 14)
+        topLabel.font = UIFont(name: Constants.globalFontBold, size: 14)
         topLabel.text = "Edit Profile"
         topLabel.sizeToFit()
         topLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (topLabel.frame.width / 2), y: 50, width: topLabel.frame.width, height: topLabel.frame.height)
@@ -304,7 +305,7 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                 privateAccountLabel.isUserInteractionEnabled = false
 //                privateAccountLabel.textColor = Constants.textColor.hexToUiColor()
                 privateAccountLabel.textColor = Constants.primaryColor.hexToUiColor()
-                privateAccountLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 14)
+                privateAccountLabel.font = UIFont(name: Constants.globalFontMedium, size: 14)
                 self.privateAccountButton?.addSubview(privateAccountLabel)
             }
             self.scrollView.addSubview(privateAccountButton)
@@ -333,7 +334,9 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
     @IBAction func SaveChangesPressed(_ sender: Any) {
         Analytics.logEvent("updated_profile", parameters: nil)
         let userID = Auth.auth().currentUser?.uid
-        makeCreatebuttonGrey()
+        self.usernameField.text = self.usernameField.text?.lowercased()
+        saveButton.startAnimation()
+//        makeCreatebuttonGrey()
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         if hasChangedProfilePic {
@@ -350,7 +353,9 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                                 if let error = error {
                                     print("*error updating: \(error)")
                                     SPAlert.present(title: "Error Saving", preset: .error, haptic: .error)
-                                    self.makeCreateButtonClickable()
+//                                    self.makeCreateButtonClickable()
+                                    self.saveButton.stopAnimation()
+//                                    self.makeCreatebuttonGrey()
                                 } else {
                                     SPAlert.present(title: "Successfully Saved!", preset: .done, haptic: .success)
                                     print("* done updating")
@@ -358,12 +363,18 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                                     self.wasPrivate = self.privateAccountCheckbox?.isSelected ?? false
                                     self.originalUser.fullname = self.nameField.text ?? ""
                                     self.originalUser.bio = self.bioField?.textView.text ?? ""
+                                    self.saveButton.stopAnimation(animationStyle: .normal, completion: {
+                                        self.makeCreatebuttonGrey()
+                                                                           })
                                 }
                                
                                 
                             }
                         } else {
                             print("* username is taken already")
+                            SPAlert.present(title: "Error: username already taken", preset: .error, haptic: .error)
+//                                    self.makeCreateButtonClickable()
+                            self.saveButton.stopAnimation()
                         }
                     }
                 } else {
@@ -371,7 +382,8 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                         if let error = error {
                             print("*error updating: \(error)")
                             SPAlert.present(title: "Error Saving", preset: .error, haptic: .error)
-                            self.makeCreateButtonClickable()
+//                            self.makeCreateButtonClickable()
+                            self.saveButton.stopAnimation()
                         } else {
                             SPAlert.present(title: "Successfully Saved!", preset: .done, haptic: .success)
                             print("* done updating")
@@ -379,6 +391,9 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                             self.wasPrivate = self.privateAccountCheckbox?.isSelected ?? false
                             self.originalUser.fullname = self.nameField.text ?? ""
                             self.originalUser.bio = self.bioField?.textView.text ?? ""
+                            self.saveButton.stopAnimation(animationStyle: .normal, completion: {
+                                self.makeCreatebuttonGrey()
+                                                                   })
                         }
                        
                         
@@ -409,6 +424,9 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                         }
                     } else {
                         print("* username is taken already")
+                        SPAlert.present(title: "Error: username already taken", preset: .error, haptic: .error)
+//                                    self.makeCreateButtonClickable()
+                        self.saveButton.stopAnimation()
                     }
                 }
                 
@@ -417,7 +435,8 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                     if let error = error {
                         print("*error updating: \(error)")
                         SPAlert.present(title: "Error Saving", preset: .error, haptic: .error)
-                        self.makeCreateButtonClickable()
+//                        self.makeCreateButtonClickable()
+                        self.saveButton.stopAnimation()
                     } else {
                         SPAlert.present(title: "Successfully Saved!", preset: .done, haptic: .success)
                         print("* done updating")
@@ -425,13 +444,16 @@ class EditProfileVC: UIViewController, UITextFieldDelegate, UITextViewDelegate, 
                         self.wasPrivate = self.privateAccountCheckbox?.isSelected ?? false
                         self.originalUser.fullname = self.nameField.text ?? ""
                         self.originalUser.bio = self.bioField?.textView.text ?? ""
+                        self.saveButton.stopAnimation(animationStyle: .normal, completion: {
+                            self.makeCreatebuttonGrey()
+                                                               })
                     }
                    
                     
                 }
             }
         }
-        
+        UIApplication.refreshProfileView()
     }
     func uploadProfilePic(completion: @escaping (_ url: String?) -> Void) {
         Analytics.logEvent("new_profile_pic", parameters: nil)

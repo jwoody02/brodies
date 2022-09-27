@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="20037" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21225" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="20020"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21207"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -24,7 +23,7 @@
                                 <color key="textColor" red="0.36618760230000003" green="0.35952293870000002" blue="0.92575353380000003" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="7xk-Bp-KNG">
+                            <view hidden="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="7xk-Bp-KNG">
                                 <rect key="frame" x="69.5" y="333.5" width="275" height="229"/>
                                 <subviews>
                                     <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="newbubblelogo.png" translatesAutoresizingMaskIntoConstraints="NO" id="QDp-ms-Uat">
@@ -52,7 +51,7 @@
                                         </constraints>
                                     </imageView>
                                 </subviews>
-                                <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <constraints>
                                     <constraint firstItem="hNd-It-f6A" firstAttribute="centerX" secondItem="7xk-Bp-KNG" secondAttribute="centerX" id="5uh-Kz-u9y"/>
                                     <constraint firstAttribute="height" constant="229" id="BVH-e0-TPn"/>
@@ -64,12 +63,68 @@
                                     <constraint firstItem="2JW-iy-0E5" firstAttribute="centerX" secondItem="7xk-Bp-KNG" secondAttribute="centerX" id="yf4-Dq-Za8"/>
                                 </constraints>
                             </view>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Dro-iv-wVQ">
+                                <rect key="frame" x="69.5" y="333.5" width="275" height="229"/>
+                                <subviews>
+                                    <label hidden="YES" opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="SOCIAL MEDIA APP" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Ai7-9q-PGZ">
+                                        <rect key="frame" x="80.5" y="131" width="114.5" height="14"/>
+                                        <constraints>
+                                            <constraint firstAttribute="width" constant="114.5" id="WDI-XF-siz"/>
+                                            <constraint firstAttribute="height" constant="14" id="sO5-xC-zyE"/>
+                                        </constraints>
+                                        <fontDescription key="fontDescription" name="Helvetica-Bold" family="Helvetica" pointSize="12"/>
+                                        <color key="textColor" red="0.36618760230000003" green="0.35952293870000002" blue="0.92575353380000003" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="newbubblelogo.png" translatesAutoresizingMaskIntoConstraints="NO" id="WyJ-po-q8j">
+                                        <rect key="frame" x="68" y="14" width="139" height="39"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="39" id="Ddc-5Z-DCv"/>
+                                            <constraint firstAttribute="width" constant="139" id="kq0-dk-SkP"/>
+                                        </constraints>
+                                    </imageView>
+                                </subviews>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstItem="WyJ-po-q8j" firstAttribute="centerY" secondItem="Dro-iv-wVQ" secondAttribute="centerY" constant="-81" id="3gZ-JZ-tjZ"/>
+                                    <constraint firstAttribute="bottom" secondItem="Ai7-9q-PGZ" secondAttribute="bottom" constant="84" id="Gj5-Lw-cAZ"/>
+                                    <constraint firstItem="Ai7-9q-PGZ" firstAttribute="centerX" secondItem="Dro-iv-wVQ" secondAttribute="centerX" id="lmF-sl-FKK"/>
+                                    <constraint firstAttribute="height" constant="229" id="rGP-tI-skT"/>
+                                    <constraint firstItem="WyJ-po-q8j" firstAttribute="centerX" secondItem="Dro-iv-wVQ" secondAttribute="centerX" id="tVA-KO-9SI"/>
+                                    <constraint firstAttribute="width" constant="275" id="xhT-2v-t0K"/>
+                                </constraints>
+                            </view>
+                            <view hidden="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="4d1-es-8dj">
+                                <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
+                                <subviews>
+                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="brodiename_white.png" translatesAutoresizingMaskIntoConstraints="NO" id="STd-Gw-oce">
+                                        <rect key="frame" x="137.5" y="428.5" width="139" height="39"/>
+                                        <constraints>
+                                            <constraint firstAttribute="width" constant="139" id="2fE-St-YFb"/>
+                                            <constraint firstAttribute="height" constant="39" id="qRW-Yv-VAl"/>
+                                        </constraints>
+                                    </imageView>
+                                </subviews>
+                                <color key="backgroundColor" red="0.36618760230000003" green="0.35952293870000002" blue="0.92575353380000003" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                                <constraints>
+                                    <constraint firstItem="STd-Gw-oce" firstAttribute="centerX" secondItem="4d1-es-8dj" secondAttribute="centerX" id="XCE-kV-cq1"/>
+                                    <constraint firstItem="STd-Gw-oce" firstAttribute="centerY" secondItem="4d1-es-8dj" secondAttribute="centerY" id="eZp-iz-znh"/>
+                                </constraints>
+                            </view>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
+                            <constraint firstItem="Dro-iv-wVQ" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="G9g-lg-TsR"/>
+                            <constraint firstItem="4d1-es-8dj" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="HgB-tj-Fuy"/>
+                            <constraint firstItem="4d1-es-8dj" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="Txf-cn-gl2"/>
+                            <constraint firstItem="4d1-es-8dj" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" id="Wlk-W3-k2U"/>
+                            <constraint firstItem="4d1-es-8dj" firstAttribute="trailing" secondItem="6Tk-OE-BBY" secondAttribute="trailing" id="bgD-Gc-Jbx"/>
                             <constraint firstItem="7xk-Bp-KNG" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="mOc-Pn-aeR"/>
                             <constraint firstItem="7xk-Bp-KNG" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="maW-RZ-PQc"/>
+                            <constraint firstItem="4d1-es-8dj" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="paX-7P-DAO"/>
+                            <constraint firstItem="Dro-iv-wVQ" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="qfn-DK-2hw"/>
+                            <constraint firstAttribute="bottom" secondItem="4d1-es-8dj" secondAttribute="bottom" id="uAN-if-j21"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -80,9 +135,7 @@
     </scenes>
     <resources>
         <image name="brandnew.png" width="892" height="892"/>
+        <image name="brodiename_white.png" width="503" height="200"/>
         <image name="newbubblelogo.png" width="579" height="200"/>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
     </resources>
 </document>

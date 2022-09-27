@@ -65,12 +65,13 @@ class PhotoPageContainerViewController: UIViewController, UIGestureRecognizerDel
         
         self.pageViewController.delegate = self
         self.pageViewController.dataSource = self
+        self.navigationItem.setHidesBackButton(true, animated: true)
 //        self.panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(didPanWith(gestureRecognizer:)))
 //        self.panGestureRecognizer.delegate = self
 //        self.pageViewController.view.addGestureRecognizer(self.panGestureRecognizer)
 
-        self.singleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(didSingleTapWith(gestureRecognizer:)))
-        self.pageViewController.view.addGestureRecognizer(self.singleTapGestureRecognizer)
+//        self.singleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(didSingleTapWith(gestureRecognizer:)))
+//        self.pageViewController.view.addGestureRecognizer(self.singleTapGestureRecognizer)
         
         styleTopAndBottom()
         self.view.backgroundColor = hexStringToUIColor(hex: Constants.backgroundColor)
@@ -108,15 +109,18 @@ class PhotoPageContainerViewController: UIViewController, UIGestureRecognizerDel
         backButton.frame = CGRect(x: 0, y: 35, width: 50, height: 60)
         backButton.tintColor = .darkGray
         
-        topLabel.font = UIFont(name: "\(Constants.globalFont)-Medium", size: 13)
+        topLabel.font = UIFont(name: Constants.globalFontMedium, size: 12)
         topLabel.text = "\(imagePosts?[0].username ?? "")"
+        if imagePosts?[0].username ?? "" == "" {
+            topLabel.text = "\(self.username)"
+        }
         topLabel.textColor = .lightGray
         topLabel.sizeToFit()
 //        topLabel.frame = CGRect(x: (UIScreen.main.bounds.width / 2) - (topLabel.frame.width / 2), y: 50, width: topLabel.frame.width, height: topLabel.frame.height)
         topLabel.frame = CGRect(x: backButton.frame.maxX, y: 50, width: topLabel.frame.width, height: topLabel.frame.height)
         
         
-        secondTopLabel.font = UIFont(name: "\(Constants.globalFont)-Bold", size: 13)
+        secondTopLabel.font = UIFont(name: Constants.globalFontBold, size: 12)
         secondTopLabel.text = "Posts"
         secondTopLabel.textColor = .black
         secondTopLabel.sizeToFit()

@@ -12,6 +12,7 @@ import Presentr
 import FirebaseFirestore
 import FirebaseAnalytics
 import SPAlert
+import FirebaseDynamicLinks
 
 class ThreeDotsOnPostController: UIViewController {
     let backgroundColor = Constants.backgroundColor.hexToUiColor()
@@ -34,6 +35,7 @@ class ThreeDotsOnPostController: UIViewController {
     
     var postID = ""
     var authorOfPost = ""
+    var imagePostURL = ""
     var presenter = Presentr(presentationType: .alert)
     private var db = Firestore.firestore()
     
@@ -50,6 +52,7 @@ class ThreeDotsOnPostController: UIViewController {
             shareBigButton.clipsToBounds = true
             shareBigButton.addReportShadow()
             shareBigButton.backgroundColor = buttonBackgrounds
+            shareBigButton.addTarget(self, action: #selector(ShareButtonPressed(_:)), for: .touchUpInside)
             shareBigButton.frame = CGRect(x: 15, y: 15, width: bigThreeButtonWidths, height: 70)
             self.shareIcon = UIImageView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
             if let shareIcon = self.shareIcon {
@@ -83,6 +86,7 @@ class ThreeDotsOnPostController: UIViewController {
             linkBigButton.clipsToBounds = true
             linkBigButton.addReportShadow()
             linkBigButton.backgroundColor = buttonBackgrounds
+            linkBigButton.addTarget(self, action: #selector(LinkButtonPressed(_:)), for: .touchUpInside)
             linkBigButton.frame = CGRect(x: Int(self.shareBigButton?.frame.maxX ?? 15) + Int(interButtonPadding), y: 15, width: bigThreeButtonWidths, height: 70)
             self.linkIcon = UIImageView(frame: CGRect(x: 0, y: 0, width: 0, height: 0))
             if let linkIcon = self.linkIcon {
@@ -154,7 +158,7 @@ class ThreeDotsOnPostController: UIViewController {
         if authorOfPost == userID {
             print("* delete post?")
             var alertController: AlertViewController = {
-                let alertController = AlertViewController(title: "Confirmation", body: "Are you sure you wanna delete this post? This action can't be undone.", titleFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14), bodyFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14), buttonFont: UIFont(name: "\(Constants.globalFont)-Bold", size: 14))
+                let alertController = AlertViewController(title: "Confirmation", body: "Are you sure you wanna delete this post? This action can't be undone.", titleFont: UIFont(name: Constants.globalFontBold, size: 13), bodyFont: UIFont(name: Constants.globalFontBold, size: 13), buttonFont: UIFont(name: Constants.globalFontBold, size: 13))
                 let cancelAction = AlertAction(title: "Cancel", style: .custom(textColor: .darkGray)) {
                     
                 }
@@ -192,6 +196,69 @@ class ThreeDotsOnPostController: UIViewController {
             self.presentPanModal(vc)
         }
         
+    }
+    @objc internal func LinkButtonPressed(_ button: UIButton) {
+        saveShareLinkToClipboard()
+    }
+    @objc internal func ShareButtonPressed(_ button: UIButton) {
+        guard let link = URL(string: "https://www.brodies.app") else { return }
+        let dynamicLinksDomainURIPrefix = "https://brodies.page.link/post?uid=\(self.authorOfPost)&posti=\(self.postID)"
+        let linkBuilder = DynamicLinkComponents(link: link, domainURIPrefix: dynamicLinksDomainURIPrefix)
+
+        linkBuilder?.iOSParameters = DynamicLinkIOSParameters(bundleID: "com.caliwood.eggtopia")
+        linkBuilder?.iOSParameters?.appStoreID = "1637329972"
+//        linkBuilder?.iOSParameters?.minimumAppVersion = "1.2.3"
+
+        linkBuilder?.analyticsParameters = DynamicLinkGoogleAnalyticsParameters(source: "inapp",
+                                                                               medium: "social",
+                                                                               campaign: "share-link-generated")
+
+        linkBuilder?.socialMetaTagParameters = DynamicLinkSocialMetaTagParameters()
+        linkBuilder?.socialMetaTagParameters?.title = "View post on Brodie's"
+        linkBuilder?.socialMetaTagParameters?.imageURL = URL(string: "\(self.imagePostURL)")
+
+        guard let longDynamicLink = linkBuilder?.url else { return }
+        print("The long URL is: \(longDynamicLink)")
+        DynamicLinkComponents.shortenURL(longDynamicLink, options: nil) { url, warnings, error in
+            guard let url = url, error != nil else { self.openPageForLink(url: longDynamicLink.absoluteString); return }
+          print("The short URL is: \(url)")
+            self.openPageForLink(url: url.absoluteString)
+        }
+    }
+    func saveShareLinkToClipboard() {
+        guard let link = URL(string: "https://www.brodies.app") else { return }
+        let dynamicLinksDomainURIPrefix = "https://brodies.page.link/post?uid=\(self.authorOfPost)&posti=\(self.postID)"
+        let linkBuilder = DynamicLinkComponents(link: link, domainURIPrefix: dynamicLinksDomainURIPrefix)
+
+        linkBuilder?.iOSParameters = DynamicLinkIOSParameters(bundleID: "com.caliwood.eggtopia")
+        linkBuilder?.iOSParameters?.appStoreID = "1637329972"
+//        linkBuilder?.iOSParameters?.minimumAppVersion = "1.2.3"
+
+        linkBuilder?.analyticsParameters = DynamicLinkGoogleAnalyticsParameters(source: "inapp",
+                                                                               medium: "social",
+                                                                               campaign: "share-link-generated")
+
+        linkBuilder?.socialMetaTagParameters = DynamicLinkSocialMetaTagParameters()
+        linkBuilder?.socialMetaTagParameters?.title = "View post on Brodie's"
+        linkBuilder?.socialMetaTagParameters?.imageURL = URL(string: "\(self.imagePostURL)")
+
+        guard let longDynamicLink = linkBuilder?.url else { return }
+        print("The long URL is: \(longDynamicLink)")
+        DynamicLinkComponents.shortenURL(longDynamicLink, options: nil) { url, warnings, error in
+            guard let url = url, error != nil else { UIPasteboard.general.string = longDynamicLink.absoluteString; SPAlert.present(title: "Link saved to clipboard!", preset: .done, haptic: .success); return }
+          print("The short URL is: \(url)")
+            UIPasteboard.general.string = url.absoluteString
+            SPAlert.present(title: "Link saved to clipboard!", preset: .done, haptic: .success)
+        }
+    }
+    func openPageForLink(url: String) {
+        if let link = NSURL(string: url)
+                {
+            let objectsToShare = [link] as [Any]
+                    let activityVC = UIActivityViewController(activityItems: objectsToShare, applicationActivities: nil)
+//                    activityVC.excludedActivityTypes = [UIActivityTypeAirDrop, UIActivityTypeAddToReadingList]
+            self.present(activityVC, animated: true, completion: nil)
+                }
     }
 }
 
