@@ -1,1 +1,2 @@
-# brodie-social-media-app
+# Brodie's
+A personal project I did over the summer, intended to be a instagram competitor focused on photo content. I made sure most elements in the app look good in terms of UI and feel good to use. I also created a brand new type of comment section that feels and looks great. Made with NoSQL via Google's firestore service along with other associated services, everything works quite effeciently and has relatively low cost as I took a lot of time to make sure the efficiency of queries was 2nd to none.
